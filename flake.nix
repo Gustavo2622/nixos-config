@@ -30,6 +30,9 @@
 
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    stylix = {
+      url = "github:danth/stylix";
+    };
   };
 
   outputs = { self,
@@ -68,6 +71,7 @@
 
 	    home-manager.users.gustavo = import hmConfig;
 	  }
+	inputs.stylix.nixosModules.stylix
 	];
       };
 
@@ -86,6 +90,7 @@
 	extraSpecialArgs = { inherit inputs outputs; };
 	modules = [
 	  hmConfig
+	  inputs.stylix.homeManagerModules.stylix
 	];
       };
     };

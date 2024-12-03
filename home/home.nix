@@ -1,4 +1,4 @@
-{config, pkgs, inputs, ...}:
+{config, pkgs, inputs, lib, ...}:
 
 rec {
   imports = [
@@ -26,7 +26,7 @@ rec {
 
   # set cursor size and dpi
   xresources.properties = {
-    "Xcursor.size" = 16;
+    "Xcursor.size" = lib.mkDefault 16;
   };
 
   xsession = {
@@ -72,7 +72,7 @@ rec {
 	"DVI-D-1, 1920x1200@59.95000, 3840x0, 1"
         "HDMI-A-1, 1920x1080@60.00000, 3840x1200, 1"
       ];
-      general = {
+      general = lib.mkDefault {
 	gaps_in = 5;
 	gaps_out = 20;
 
@@ -87,7 +87,7 @@ rec {
 	
 	layout = "dwindle";
       };
-      decoration = {
+      decoration = lib.mkDefault {
 	rounding = 10;
 
 	active_opacity = 1.0;
@@ -282,7 +282,7 @@ rec {
     # custom settings
     settings = {
       env.TERM = "xterm-256color";
-      font = {
+      font = lib.mkForce {
 	normal = {
 	  family = "Fira Code Nerd Font";
 	  style = "Regular";
