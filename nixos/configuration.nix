@@ -21,7 +21,7 @@
       # Include graphics card configuration
       ./nvidia.nix
       # autorandr settings for x11
-      ./monitor-cfg.nix
+      # ../modules/config/desktop-monitor-cfg.nix
     ];
 
   # Bootloader.
@@ -81,7 +81,7 @@
       defaultSession = "none+awesome";
     };
   };
-  monitor-cfg.enable = true;
+  # desktop-monitor-cfg.enable = true;
   
   # Install hyprland
   programs.hyprland = {

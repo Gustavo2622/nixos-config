@@ -228,11 +228,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1733073798,
-        "narHash": "sha256-7wEIiBbm1gkHchJCK6Qo7yHV/HZfj8qEhtD80/9HDLg=",
+        "lastModified": 1733175814,
+        "narHash": "sha256-zFOtOaqjzZfPMsm1mwu98syv3y+jziAq5DfWygaMtLg=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "441fae847ddfe20f9f9a4c47345691a205bb772c",
+        "rev": "bf23fe41082aa0289c209169302afd3397092f22",
         "type": "github"
       },
       "original": {
@@ -306,11 +306,11 @@
         "xdph": "xdph"
       },
       "locked": {
-        "lastModified": 1733073275,
-        "narHash": "sha256-8F5SUIglJyqSKv+iDglxkfFIeHSYPw5iexeFjzZDzVc=",
+        "lastModified": 1733157082,
+        "narHash": "sha256-rmJkUKyvaejRaQeEOpInjGjQv6rgFkm2uJ2iVlMEuOk=",
         "owner": "hyprwm",
         "repo": "Hyprland",
-        "rev": "6d7544458d0fafcae410c1978a0cabce2fb4a346",
+        "rev": "92186898c0ca1b3f72922b72c4af1723f0d9b888",
         "type": "github"
       },
       "original": {
@@ -567,11 +567,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1732837521,
-        "narHash": "sha256-jNRNr49UiuIwaarqijgdTR2qLPifxsVhlJrKzQ8XUIE=",
+        "lastModified": 1733015953,
+        "narHash": "sha256-t4BBVpwG9B4hLgc6GUBuj3cjU7lP/PJfpTHuSqE+crk=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "970e93b9f82e2a0f3675757eb0bfc73297cc6370",
+        "rev": "ac35b104800bff9028425fec3b6e8a41de2bbfff",
         "type": "github"
       },
       "original": {
@@ -608,11 +608,11 @@
       "locked": {
         "lastModified": 1,
         "narHash": "sha256-sdb2lQHI5A9L1aMayIZ90SzFzOjfjGyTQ74sMu3FPsw=",
-        "path": "/nix/store/9y68jwa1hkh164zg3fkydyhbsp5r073d-source/home/nixvim",
+        "path": "/nix/store/28fxbmv55wapdc54diq4yzcjcbyra15i-source/home/nixvim",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/9y68jwa1hkh164zg3fkydyhbsp5r073d-source/home/nixvim",
+        "path": "/nix/store/28fxbmv55wapdc54diq4yzcjcbyra15i-source/home/nixvim",
         "type": "path"
       }
     },

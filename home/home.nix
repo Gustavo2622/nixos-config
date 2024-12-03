@@ -1,6 +1,10 @@
 {config, pkgs, inputs, ...}:
 
 rec {
+  imports = [
+    ../modules/config/desktop-monitor-cfg.nix
+  ];
+
   home.username="gustavo";
   home.homeDirectory = "/home/${home.username}";
   xdg.enable = true; # Sets XDG_CONFIG env vars
@@ -25,17 +29,26 @@ rec {
     "Xcursor.size" = 16;
   };
 
-  xsession.windowManager.awesome = {
+  xsession = {
     enable = true;
-    luaModules = with pkgs.luaPackages; [
-      luarocks # package manager for lua modules
-      luadbi-mysql # database abstraction
-    ];
+    windowManager.awesome = {
+      enable = true;
+      luaModules = with pkgs.luaPackages; [
+	luarocks # package manager for lua modules
+	luadbi-mysql # database abstraction
+      ];
+    };
+
+    initExtra = ''
+      dbus-update-activation-environment --systemd DISPLAY
+      eval $(gnome-keyring-daemon --start --components=pkcs11,secrets,ssh)
+      export SSH_AUTH_SOCK
+    '';
   };
   xdg.configFile = {
     "awesome/rc.lua".text = builtins.readFile ./awesome/rc.lua;
   };
-
+  desktop-monitor-cfg.enable = true;
 
   wayland.windowManager.hyprland = {
     enable = true;
@@ -235,6 +248,10 @@ rec {
 
     # Web apps
     ferdium
+
+    # Web browsers
+    firefox
+    qutebrowser
   ]) ++ [ inputs.nixvim.packages.${pkgs.system}.nvim ];
 
   programs.git = {
