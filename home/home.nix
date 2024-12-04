@@ -1,4 +1,4 @@
-{config, pkgs, inputs, lib, ...}:
+{config, pkgs, inputs, lib, osConfig, ...}:
 
 rec {
   imports = [
@@ -29,7 +29,7 @@ rec {
     "Xcursor.size" = lib.mkDefault 16;
   };
 
-  xsession = {
+  xsession = lib.mkIf osConfig.gustavoUseAwesome {
     enable = true;
     windowManager.awesome = {
       enable = true;
@@ -48,9 +48,9 @@ rec {
   xdg.configFile = {
     "awesome/rc.lua".text = builtins.readFile ./awesome/rc.lua;
   };
-  desktop-monitor-cfg.enable = true;
+  desktop-monitor-cfg.enable = lib.mkIf osConfig.gustavoUseAwesome true;
 
-  wayland.windowManager.hyprland = {
+  wayland.windowManager.hyprland = lib.mkIf osConfig.gustavoUseHyprland {
     enable = true;
     package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
     plugins = [
@@ -69,8 +69,8 @@ rec {
       };
       monitor = [
         "DP-1, 3840x2160@60.00000, 0x0, 2"
-	"DVI-D-1, 1920x1200@59.95000, 3840x0, 1"
-        "HDMI-A-1, 1920x1080@60.00000, 3840x1200, 1"
+	"DVI-D-1, 1920x1200@59.95000, 1920x0, 1"
+        "HDMI-A-1, 1920x1080@60.00000, 1920x1200, 1"
       ];
       general = {
 	gaps_in = 5;

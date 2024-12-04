@@ -68,6 +68,7 @@
 	  home-manager.nixosModules.home-manager {
 	    home-manager.useGlobalPkgs = true;
             home-manager.extraSpecialArgs = { inherit inputs outputs; }; # Extra params to home-manager
+	    home-manager.backupFileExtension = "bck";
 
 	    home-manager.users.gustavo = import hmConfig;
 	  }
