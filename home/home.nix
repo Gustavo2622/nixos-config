@@ -72,13 +72,13 @@ rec {
 	"DVI-D-1, 1920x1200@59.95000, 3840x0, 1"
         "HDMI-A-1, 1920x1080@60.00000, 3840x1200, 1"
       ];
-      general = lib.mkDefault {
+      general = {
 	gaps_in = 5;
 	gaps_out = 20;
 
 	border_size = 2;
-	"col.active_border" = ["rgba(33ccffee) rgba(00ff99ee) 45deg"];
-	"col.inactive_border" = "rgba(595959aa)";
+	"col.active_border" = lib.mkDefault ["rgba(33ccffee) rgba(00ff99ee) 45deg"];
+	"col.inactive_border" = lib.mkDefault "rgba(595959aa)";
 
 	resize_on_border = false;
 
@@ -87,7 +87,7 @@ rec {
 	
 	layout = "dwindle";
       };
-      decoration = lib.mkDefault {
+      decoration = {
 	rounding = 10;
 
 	active_opacity = 1.0;
@@ -97,7 +97,7 @@ rec {
 	  enabled = true;
 	  range = 4;
 	  render_power = 3;
-	  color = "rgba(1a1a1aee)";
+	  color = lib.mkDefault "rgba(1a1a1aee)";
 	};
 
 	blur = {

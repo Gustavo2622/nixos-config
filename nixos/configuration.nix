@@ -221,6 +221,17 @@
   stylix = {
     enable = true;
     image = ../Wallpapers/PinkPurpleHaze.jpg;
+
+    fonts = {
+      monospace = {
+	package = pkgs.nerd-fonts.fira-code;
+	name = "Fira Code Nerd Fonts Monospace";
+      };
+      sizes = {
+	terminal = 16;
+      };
+    };
+    polarity = "dark";
   };
 
 }
