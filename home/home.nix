@@ -29,7 +29,7 @@ rec {
     "Xcursor.size" = lib.mkDefault 16;
   };
 
-  xsession = lib.mkIf osConfig.gustavoUseAwesome {
+  xsession = lib.mkIf osConfig.awesomewm.enable {
     enable = true;
     windowManager.awesome = {
       enable = true;
@@ -48,9 +48,9 @@ rec {
   xdg.configFile = {
     "awesome/rc.lua".text = builtins.readFile ./awesome/rc.lua;
   };
-  desktop-monitor-cfg.enable = lib.mkIf osConfig.gustavoUseAwesome true;
+  desktop-monitor-cfg.enable = lib.mkIf osConfig.awesomewm.enable true;
 
-  wayland.windowManager.hyprland = lib.mkIf osConfig.gustavoUseHyprland {
+  wayland.windowManager.hyprland = lib.mkIf osConfig.hyprlandwm.enable {
     enable = true;
     package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
     plugins = [
@@ -129,15 +129,14 @@ rec {
 	sensitivity = 0;
       };
       "$mod" = "SUPER";
-      "$menu" = "rofi";
       bind = 
 	[ "$mod, F, exec, firefox"
-	  "$mod, Enter, exec, alacritty"
-	  ", Print, exec, grimblast copy area"
-	  "$mod, Q, exec, kitty"
+	  "$mod, Return, exec, alacritty"
+	  "$mod, Q, exec, qutebrowser"
+	  "$mod, K, exec, kitty"
 	  "$mod, C, killactive"
 	  "$mod, V, togglefloating"
-	  "$mod, R, exec, $menu"
+	  "$mod, R, exec, rofi -show drun"
 	  "$mod, P, pseudo"
 	  "$mod, J, togglesplit" 
 	  "$mod, S, togglespecialworkspace, magic"
@@ -175,13 +174,13 @@ rec {
   };
 
   # Widgets for Wayland
-  programs.eww = lib.mkIf osConfig.gustavoUseHyprland {
-    enable = true;
-    enableBashIntegration = true;
-    configDir = ./eww;
-  };
+  # programs.eww = lib.mkIf osConfig.hyprlandwm.enable {
+  #   enable = true;
+  #   enableBashIntegration = true;
+  #   configDir = ./eww;
+  # };
 
-  programs.rofi  = lib.mkIf osConfig.gustavoUseHyprland {
+  programs.rofi  = lib.mkIf osConfig.hyprlandwm.enable {
     enable  = true;
     pass.enable = false;  #  TODO: Set this up later
   };

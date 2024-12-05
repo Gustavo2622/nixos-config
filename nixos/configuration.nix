@@ -10,19 +10,11 @@
       ./hardware-configuration.nix
       # Include graphics card configuration
       ./nvidia.nix
+      ./awesomewm.nix
+      ./hyprlandwm.nix
       # autorandr settings for x11
       # ../modules/config/desktop-monitor-cfg.nix
     ];
-
-  # FIXME: remove later
-  options.gustavoUseAwesome = lib.mkOption {
-    type = lib.types.bool;
-    default = false;
-  };
-  options.gustavoUseHyprland = lib.mkOption {
-    type = lib.types.bool;
-    default = false;
-  };
 
   config = {
     # Nix config
@@ -172,8 +164,8 @@
 
     # Enable xdg desktop portals to allow flatpak
     xdg.portal.enable = true;
-    xdg.portal.extraPortals = with pkgs; [
-	  xdg-desktop-portal-gtk ];
+    xdg.portal.extraPortals = with pkgs; 
+      [ xdg-desktop-portal-gtk ];
 
     xdg.portal.config = {
       common = {
@@ -225,47 +217,13 @@
       polarity = "dark";
     };
 
+    awesomewm.enable = lib.mkDefault true;
+
     specialisation = {
-      awesomewm = {
-	configuration = {
-	  # FIXME: Get something better for this 
-	  gustavoUseAwesome = true;
-	  services = {
-	    xserver = {
-		enable = true;
-
-		windowManager.awesome = {
-		  enable = true;
-		  luaModules = with pkgs.luaPackages; [
-		    luarocks # package manager for lua modules
-		    luadbi-mysql # database abstraction
-		  ];
-		};
-	    };
-
-	    displayManager = {
-	      sddm.enable = true;
-	      defaultSession = "none+awesome";
-	    };
-	  };
-	};
-      };
       hyprland = {
 	configuration = {
-	  gustavoUseHyprland = true;
-	# Install hyprland
-	  programs.hyprland = {
-	    enable = true;
-	    # set the flake package
-	    package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
-	    # set the portal also, to remain in sync
-	    portalPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
-	    xwayland.enable = true;
-	  };
-	  services.displayManager.sddm = {
-	    enable = true;
-	    wayland.enable = true;
-	  };
+	  awesomewm.enable = lib.mkOverride 950 false;
+	  hyprlandwm.enable = lib.mkOverride 950 true;
 	};
       };
     };
