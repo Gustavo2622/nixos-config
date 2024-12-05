@@ -129,6 +129,7 @@ rec {
 	sensitivity = 0;
       };
       "$mod" = "SUPER";
+      "$menu" = "rofi";
       bind = 
 	[ "$mod, F, exec, firefox"
 	  "$mod, Enter, exec, alacritty"
@@ -173,6 +174,20 @@ rec {
     };
   };
 
+  # Widgets for Wayland
+  programs.eww = lib.mkIf osConfig.gustavoUseHyprland {
+    enable = true;
+    enableBashIntegration = true;
+    configDir = ./eww;
+  };
+
+  programs.rofi  = lib.mkIf osConfig.gustavoUseHyprland {
+    enable  = true;
+    pass.enable = false;  #  TODO: Set this up later
+  };
+
+  # TODO: Move above to module  and  make a  flake for  waypaper  and swww
+
   # Packages that should be installed to the user profile
   home.packages = (with pkgs; [
     
@@ -191,6 +206,12 @@ rec {
     yq-go # yaml processor https://github.com/mikefarah/yq
     eza # modern replacement for ls
     fzf # command line fuzzy find
+    fd # Better search
+    zoxide # smarter cd
+    clipboard-jh # Better, fancier clipboard 
+    xclip
+    xsel
+    yazi # Rust file manager
 
     # networking tools
     mtr # network diagnostics
