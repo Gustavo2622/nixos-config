@@ -6,7 +6,7 @@
       "Whether to enable awesomewm config and related things.";
   };
 
-  config = {
+  config = lib.mkIf (config.awesomewm.enable) {
     services = {
       xserver = {
 	  enable = true;
@@ -23,6 +23,10 @@
       displayManager = {
 	sddm.enable = true;
 	defaultSession = "none+awesome";
+	autoLogin = {
+	  enable = true;
+	  user = "gustavo";
+	};
       };
     };
   };

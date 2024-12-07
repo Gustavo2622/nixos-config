@@ -9,6 +9,9 @@
     nixpkgs-stable = {
       url = "github:NixOS/nixpkgs/nixos-24.11";
     };
+    hardware = {
+      url = "github:NixOS/nixos-hardware/master";
+    };
     # home-manager for home management : )
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -33,7 +36,6 @@
     stylix = {
       url = "github:danth/stylix";
     };
-    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # impermanence.url = "github:nix-community/impermanence";
     sops-nix = {
       url = "github:mic92/sops-nix";
@@ -70,7 +72,7 @@
     nixosConfigurations = {
       gustavo-Desktop = nixpkgs.lib.nixosSystem rec {
 	system = "x86_64-linux";
-	specialArgs = {inherit inputs outputs home-manager; }; # Extra params to configuration
+	specialArgs = {inherit inputs outputs home-manager hmConfig; }; # Extra params to configuration
 	modules = [
 	  nixOsConfig
 

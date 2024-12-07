@@ -7,7 +7,7 @@
       "Whether to enable hyprland wm config and related things.";
   };
 
-  config = {
+  config = lib.mkIf (config.hyprlandwm.enable) {
     programs.hyprland = {
       enable = true;
       # set the flake package
@@ -16,9 +16,14 @@
       portalPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
       xwayland.enable = true;
     };
-    services.displayManager.sddm = {
+    services.displayManager = {
+      sddm = {
+	enable = true;
+	wayland.enable = true;
+      };
       enable = true;
-      wayland.enable = true;
+      logToFile = true;
+      # defaultSession = "hyprland";
     };
   };
 }
