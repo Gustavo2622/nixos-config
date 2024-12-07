@@ -33,9 +33,20 @@
     stylix = {
       url = "github:danth/stylix";
     };
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+    # impermanence.url = "github:nix-community/impermanence";
+    sops-nix = {
+      url = "github:mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nix-gl = {
+      url = "github:nix-community/nixgl";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self,
+  outputs = { 
+    self,
     nixpkgs,
     home-manager,
     ... 
@@ -59,28 +70,13 @@
     nixosConfigurations = {
       gustavo-Desktop = nixpkgs.lib.nixosSystem rec {
 	system = "x86_64-linux";
-	specialArgs = {inherit inputs outputs; }; # Extra params to configuration
+	specialArgs = {inherit inputs outputs home-manager; }; # Extra params to configuration
 	modules = [
 	  nixOsConfig
 
 	  # make home-manager as a module of nixos
 	  # so that its config will be deployed automatically
-	  home-manager.nixosModules.home-manager {
-	    home-manager.useGlobalPkgs = true;
-            home-manager.extraSpecialArgs = { inherit inputs outputs; }; # Extra params to home-manager
-	    home-manager.backupFileExtension = "bck";
-
-	    home-manager.users.gustavo = import hmConfig;
-	  }
-	inputs.stylix.nixosModules.stylix
-	];
-      };
-
-      gustavo-Desktop-noHome = nixpkgs.lib.nixosSystem rec {
-	system = "x86_64-linux";
-	specialArgs = {inherit inputs outputs;};
-	modules = [
-	  nixOsConfig
+	  inputs.stylix.nixosModules.stylix
 	];
       };
     };

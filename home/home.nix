@@ -2,7 +2,7 @@
 
 rec {
   imports = [
-    ../modules/config/desktop-monitor-cfg.nix
+    ./desktop-monitor-cfg.nix
   ];
 
   home.username="gustavo";

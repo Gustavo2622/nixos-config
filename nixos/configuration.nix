@@ -2,7 +2,15 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ lib, config, pkgs, inputs, ... }:
+{ 
+  lib,
+  config,
+  pkgs,
+  inputs,
+  outputs,
+  home-manager,
+  ... 
+} @ args:
 
 {
     imports =
@@ -10,6 +18,14 @@
       ./hardware-configuration.nix
       # Include graphics card configuration
       ./nvidia.nix
+      # NixOS hardware imports
+      inputs.hardware.nixosModules.common-gpu-nvidia-nonprime
+      inputs.hardware.nixosModules.common-pc-ssd
+      inputs.hardware.nixosModules.common-cpu-intel-cpu-only
+      inputs.hardware.nixosModules.common-pc
+
+      home-manager.nixosModules.home-manager
+
       ./awesomewm.nix
       ./hyprlandwm.nix
       # autorandr settings for x11
@@ -29,11 +45,20 @@
       };
     };
 
+    home-manager.useGlobalPkgs = true;
+    home-manager.extraSpecialArgs = { inherit inputs outputs; }; # Extra params to home-manager
+    home-manager.backupFileExtension = "bck";
+
+    home-manager.users.gustavo = import args.hmConfig;
+
     # Bootloader.
     boot.loader.systemd-boot.enable = true;
     boot.loader.efi.canTouchEfiVariables = true;
 
-    networking.hostName = "gustavo-Desktop"; # Define your hostname.
+    networking = {
+      hostName = "gustavo-Desktop"; # Define your hostname.
+      useDHCP = lib.mkOverride 1200 true;
+    };
     # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
     # Configure network proxy if necessary
@@ -121,8 +146,8 @@
     services.displayManager.autoLogin.user = "gustavo";
 
     # Workaround for GNOME autologin: https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-945091229
-    systemd.services."getty@tty1".enable = false;
-    systemd.services."autovt@tty1".enable = false;
+    # systemd.services."getty@tty1".enable = false;
+    # systemd.services."autovt@tty1".enable = false;
     systemd.services.nix-daemon.environment.TMPDIR = "/var/tmp";
 
     # Install firefox.
