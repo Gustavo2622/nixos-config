@@ -1,9 +1,14 @@
-
-{config, options, pkgs, lib, inputs, ...}:
-
 {
+  config,
+  options,
+  pkgs,
+  lib,
+  inputs,
+  ...
+}: {
   options = {
-    hyprlandwm.enable = lib.mkEnableOption 
+    hyprlandwm.enable =
+      lib.mkEnableOption
       "Whether to enable hyprland wm config and related things.";
   };
 
@@ -18,8 +23,8 @@
     };
     services.displayManager = {
       sddm = {
-	enable = true;
-	wayland.enable = true;
+        enable = true;
+        wayland.enable = true;
       };
       enable = true;
       logToFile = true;

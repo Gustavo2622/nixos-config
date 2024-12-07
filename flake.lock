@@ -833,11 +833,11 @@
       "locked": {
         "lastModified": 1,
         "narHash": "sha256-sdb2lQHI5A9L1aMayIZ90SzFzOjfjGyTQ74sMu3FPsw=",
-        "path": "/nix/store/xyn865ch8lp91c4857yg749bqcs0zz3i-source/home/nixvim",
+        "path": "/nix/store/wdxzhzf9g21n7f26wvm74bx5i87kgjxp-source/home/nixvim",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/xyn865ch8lp91c4857yg749bqcs0zz3i-source/home/nixvim",
+        "path": "/nix/store/wdxzhzf9g21n7f26wvm74bx5i87kgjxp-source/home/nixvim",
         "type": "path"
       }
     },

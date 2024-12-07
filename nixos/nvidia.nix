@@ -1,18 +1,20 @@
-{ config, lib, pkgs, ... }:
-
 {
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
   # Enable graphics
   hardware.graphics = {
     enable = true;
   };
 
   services.xserver.videoDrivers = ["nvidia"];
-  
+
   hardware.nvidia = {
-  
     # Modesetting is required
     modesetting.enable = true;
- 
+
     powerManagement.enable = true;
 
     powerManagement.finegrained = false;
@@ -24,4 +26,3 @@
     package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
 }
-

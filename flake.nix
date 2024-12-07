@@ -47,50 +47,50 @@
     };
   };
 
-  outputs = { 
+  outputs = {
     self,
     nixpkgs,
     home-manager,
-    ... 
-  } @ inputs: let 
-    inherit (self) outputs; 
+    ...
+  } @ inputs: let
+    inherit (self) outputs;
     systems = [
       "x86_64-linux"
-
     ];
     forAllSystems = nixpkgs.lib.genAttrs systems;
     nixOsConfig = ./nixos/configuration.nix;
     hmConfig = ./home/home.nix;
   in {
-    packages = forAllSystems (system: import ./pkgs nixpkgs.legacyPackages.${system}) 
-     // inputs.nixvim.packages;
+    packages =
+      forAllSystems (system: import ./pkgs nixpkgs.legacyPackages.${system})
+      // inputs.nixvim.packages;
     formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
 
-    overlays = import ./overlays { inherit inputs; };
+    overlays = import ./overlays {inherit inputs;};
     nixosModules = import ./modules/nixos;
     homeManagerModules = import ./modules/home-manager;
     nixosConfigurations = {
       gustavo-Desktop = nixpkgs.lib.nixosSystem rec {
-	system = "x86_64-linux";
-	specialArgs = {inherit inputs outputs home-manager hmConfig; }; # Extra params to configuration
-	modules = [
-	  nixOsConfig
+        system = "x86_64-linux";
+        specialArgs = {inherit inputs outputs home-manager hmConfig;}; # Extra params to configuration
+        modules = [
+          nixOsConfig
 
-	  # make home-manager as a module of nixos
-	  # so that its config will be deployed automatically
-	  inputs.stylix.nixosModules.stylix
-	];
+          # make home-manager as a module of nixos
+          # so that its config will be deployed automatically
+          inputs.stylix.nixosModules.stylix
+        ];
       };
     };
 
     homeConfigurations = {
       "gustavo@Gustavo-Desktop" = home-manager.lib.homeManagerConfiguration {
-	pkgs = nixpkgs.legacyPackages.x86_64-linux;
-	extraSpecialArgs = { inherit inputs outputs; };
-	modules = [
-	  hmConfig
-	  inputs.stylix.homeManagerModules.stylix
-	];
+        pkgs = nixpkgs.legacyPackages.x86_64-linux;
+        extraSpecialArgs = {inherit inputs outputs;};
+        modules = [
+          hmConfig
+          inputs.stylix.homeManagerModules.stylix
+        ];
       };
     };
   };

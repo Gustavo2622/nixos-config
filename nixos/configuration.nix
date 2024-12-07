@@ -1,52 +1,49 @@
 # Edit this configuration file to define what should be installed on
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
-
-{ 
+{
   lib,
   config,
   pkgs,
   inputs,
   outputs,
   home-manager,
-  ... 
-} @ args:
+  ...
+} @ args: {
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+    # Include graphics card configuration
+    ./nvidia.nix
+    # NixOS hardware imports
+    inputs.hardware.nixosModules.common-gpu-nvidia-nonprime
+    inputs.hardware.nixosModules.common-pc-ssd
+    inputs.hardware.nixosModules.common-cpu-intel-cpu-only
+    inputs.hardware.nixosModules.common-pc
 
-{
-    imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-      # Include graphics card configuration
-      ./nvidia.nix
-      # NixOS hardware imports
-      inputs.hardware.nixosModules.common-gpu-nvidia-nonprime
-      inputs.hardware.nixosModules.common-pc-ssd
-      inputs.hardware.nixosModules.common-cpu-intel-cpu-only
-      inputs.hardware.nixosModules.common-pc
+    home-manager.nixosModules.home-manager
 
-      home-manager.nixosModules.home-manager
-
-      ./awesomewm.nix
-      ./hyprlandwm.nix
-      # autorandr settings for x11
-      # ../modules/config/desktop-monitor-cfg.nix
-    ];
+    ./awesomewm.nix
+    ./hyprlandwm.nix
+    # autorandr settings for x11
+    # ../modules/config/desktop-monitor-cfg.nix
+  ];
 
   config = {
     # Nix config
     nix = {
       package = pkgs.nixVersions.latest;
       extraOptions = ''
-	experimental-features = nix-command flakes
+        experimental-features = nix-command flakes
       '';
       settings = {
-	substituters = ["https://hyprland.cachix.org"];
-	trusted-public-keys = ["hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="];
+        substituters = ["https://hyprland.cachix.org"];
+        trusted-public-keys = ["hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="];
       };
     };
 
     home-manager.useGlobalPkgs = true;
-    home-manager.extraSpecialArgs = { inherit inputs outputs; }; # Extra params to home-manager
+    home-manager.extraSpecialArgs = {inherit inputs outputs;}; # Extra params to home-manager
     home-manager.backupFileExtension = "bck";
 
     home-manager.users.gustavo = import args.hmConfig;
@@ -94,8 +91,7 @@
     # services.xserver.desktopManager.gnome.enable = true;
 
     # desktop-monitor-cfg.enable = true;
-    
-    
+
     # Configure keymap in X11
     services.xserver.xkb = {
       layout = "us";
@@ -135,9 +131,9 @@
     users.users.gustavo = {
       isNormalUser = true;
       description = "Gustavo";
-      extraGroups = [ "networkmanager" "wheel" ];
+      extraGroups = ["networkmanager" "wheel"];
       packages = with pkgs; [
-      #  thunderbird
+        #  thunderbird
       ];
     };
 
@@ -162,18 +158,18 @@
     # List packages installed in system profile. To search, run:
     # $ nix search wget
     environment.systemPackages = with pkgs; [
-       vim 
-       zenith-nvidia
-       neovim
-       git
-       kitty # for hyprland
-       nh 
-       nix-output-monitor
-       nvd
-       wget
+      vim
+      zenith-nvidia
+      neovim
+      git
+      kitty # for hyprland
+      nh
+      nix-output-monitor
+      nvd
+      wget
     ];
     environment.variables.EDITOR = "nvim";
-    environment.variables.FLAKE = "/etc/nixos"; # for nh 
+    environment.variables.FLAKE = "/etc/nixos"; # for nh
 
     fonts.fontDir.enable = true;
 
@@ -189,14 +185,13 @@
 
     # Enable xdg desktop portals to allow flatpak
     xdg.portal.enable = true;
-    xdg.portal.extraPortals = with pkgs; 
-      [ xdg-desktop-portal-gtk ];
+    xdg.portal.extraPortals = with pkgs; [xdg-desktop-portal-gtk];
 
     xdg.portal.config = {
       common = {
-	default = [
-	  "gtk"
-	];
+        default = [
+          "gtk"
+        ];
       };
     };
 
@@ -231,13 +226,13 @@
       image = ../Wallpapers/PinkPurpleHaze.jpg;
 
       fonts = {
-	monospace = {
-	  package = pkgs.nerd-fonts.fira-code;
-	  name = "Fira Code Nerd Fonts Monospace";
-	};
-	sizes = {
-	  terminal = 16;
-	};
+        monospace = {
+          package = pkgs.nerd-fonts.fira-code;
+          name = "Fira Code Nerd Fonts Monospace";
+        };
+        sizes = {
+          terminal = 16;
+        };
       };
       polarity = "dark";
     };
@@ -246,10 +241,10 @@
 
     specialisation = {
       hyprland = {
-	configuration = {
-	  awesomewm.enable = lib.mkOverride 950 false;
-	  hyprlandwm.enable = lib.mkOverride 950 true;
-	};
+        configuration = {
+          awesomewm.enable = lib.mkOverride 950 false;
+          hyprlandwm.enable = lib.mkOverride 950 true;
+        };
       };
     };
   };

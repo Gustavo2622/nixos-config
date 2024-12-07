@@ -1,7 +1,6 @@
-{self, ...}: 
-{
+{self, ...}: {
   # Import all your configuration modules here
-  imports = [ ./bufferline.nix ];
+  imports = [./bufferline.nix];
 
   colorschemes.catppuccin.enable = true;
 
@@ -22,17 +21,17 @@
     telescope.enable = true;
     lazygit.enable = true;
   };
-  
+
   # Setup lsps
   plugins.lsp = {
     enable = true;
-    
+
     servers = {
       lua_ls.enable = true;
       ocamllsp = {
         enable = true;
-	package = null; # maybe get the package directly later?
-	autostart = true;
+        package = null; # maybe get the package directly later?
+        autostart = true;
       };
 
       # rust-analyzer.enable = true;
@@ -65,11 +64,11 @@
       onlyInCursor = true;
       numShortcut = true;
       keys = {
-	exec = "<CR>";
-	quit = [
-	  "<Esc>"
-	  "q"
-	];
+        exec = "<CR>";
+        quit = [
+          "<Esc>"
+          "q"
+        ];
       };
     };
     lightbulb = {
@@ -81,12 +80,12 @@
     rename = {
       autoSave = false;
       keys = {
-	exec = "<CR>";
-	quit = [
-	  "<C-k>"
-	  "<Esc>"
-	];
-	select = "x";
+        exec = "<CR>";
+        quit = [
+          "<C-k>"
+          "<Esc>"
+        ];
+        select = "x";
       };
     };
     outline = {
@@ -96,9 +95,9 @@
       layout = "normal";
       winPosition = "right";
       keys = {
-	jump = "e";
-	quit = "q";
-	toggleOrJump = "o";
+        jump = "e";
+        quit = "q";
+        toggleOrJump = "o";
       };
     };
     scrollPreview = {
@@ -113,86 +112,77 @@
     autoEnableSources = true;
     settings = {
       mapping = {
-	"<C-d>" =
-	  "cmp.mapping.scroll_docs(-4)";
-	"<C-f>" =
-	  "cmp.mapping.scroll_docs(4)";
-	"<C-Space>" =
-	  "cmp.mapping.complete()";
-	"<C-e>" =
-	  "cmp.mapping.close()";
-	"<C-n>" =
-	  "cmp.mapping(cmp.mapping.select_next_item({behavior = cmp.SelectBehavior.Select}), {'i', 's'})";
-	"<C-p>" =
-	  "cmp.mapping(cmp.mapping.select_prev_item({behavior = cmp.SelectBehavior.Select}), {'i', 's'})";
-	"<Tab>" =
-	  "cmp.mapping.confirm({ select = false, behavior = cmp.ConfirmBehavior.Replace })";
+        "<C-d>" = "cmp.mapping.scroll_docs(-4)";
+        "<C-f>" = "cmp.mapping.scroll_docs(4)";
+        "<C-Space>" = "cmp.mapping.complete()";
+        "<C-e>" = "cmp.mapping.close()";
+        "<C-n>" = "cmp.mapping(cmp.mapping.select_next_item({behavior = cmp.SelectBehavior.Select}), {'i', 's'})";
+        "<C-p>" = "cmp.mapping(cmp.mapping.select_prev_item({behavior = cmp.SelectBehavior.Select}), {'i', 's'})";
+        "<Tab>" = "cmp.mapping.confirm({ select = false, behavior = cmp.ConfirmBehavior.Replace })";
       };
 
-      preselect = 
-	"cmp.PreselectMode.None";
+      preselect = "cmp.PreselectMode.None";
 
-      snippet.expand =
-	"function(args) require('luasnip').lsp_expand(args.body) end";
+      snippet.expand = "function(args) require('luasnip').lsp_expand(args.body) end";
 
       sources = [
-	{
-	  name = "nvim_lsp";
-	  priority = 1000;
-	}
-	{
-	  name = "nvim_lsp_signature_help";
-	  priority = 1000;
-	}
-	{
-	  name = "nvim_lsp_document_symbol";
-	  priority = 1000;
-	}
-	{
-	  name = "treesitter";
-	  priority = 850;
-	}
-	{
-	  name = "luasnip";
-	  priority = 750;
-	}
-	{
-	  name = "buffer";
-	  priority = 500;
-	}
-	{
-	  name = "rg";
-	  priority = 300;
-	}
-	{
-	  name = "path";
-	  priority = 300;
-	}
-# Bugged, should be done elsewhere
-#	{
-#	  name = "cmdline";
-#	  priority = 300;
-#	}
-	{
-	  name = "spell";
-	  priority = 300;
-	}
-	{
-	  name = "git";
-	  priority = 250;
-	}
-#	{
-#	  name = "zsh";
-#	  priority = 250;
-#	}
-	{
-	  name = "calc";
-	  priority = 150;
-	}
-	{
-	  name = "emoji";
-	  priority = 100;
-	}
+        {
+          name = "nvim_lsp";
+          priority = 1000;
+        }
+        {
+          name = "nvim_lsp_signature_help";
+          priority = 1000;
+        }
+        {
+          name = "nvim_lsp_document_symbol";
+          priority = 1000;
+        }
+        {
+          name = "treesitter";
+          priority = 850;
+        }
+        {
+          name = "luasnip";
+          priority = 750;
+        }
+        {
+          name = "buffer";
+          priority = 500;
+        }
+        {
+          name = "rg";
+          priority = 300;
+        }
+        {
+          name = "path";
+          priority = 300;
+        }
+        # Bugged, should be done elsewhere
+        #	{
+        #	  name = "cmdline";
+        #	  priority = 300;
+        #	}
+        {
+          name = "spell";
+          priority = 300;
+        }
+        {
+          name = "git";
+          priority = 250;
+        }
+        #	{
+        #	  name = "zsh";
+        #	  priority = 250;
+        #	}
+        {
+          name = "calc";
+          priority = 150;
+        }
+        {
+          name = "emoji";
+          priority = 100;
+        }
       ];
     };
   };
@@ -202,20 +192,20 @@
     enable = true;
     cmp.enable = true;
     cmp.menu = {
-          buffer = "";
-          calc = "";
-          cmdline = "";
-          codeium = "󱜙";
-          emoji = "󰞅";
-          git = "";
-          luasnip = "󰩫";
-          neorg = "";
-          nvim_lsp = "";
-          nvim_lua = "";
-          path = "";
-          spell = "";
-          treesitter = "󰔱";
-        };
+      buffer = "";
+      calc = "";
+      cmdline = "";
+      codeium = "󱜙";
+      emoji = "󰞅";
+      git = "";
+      luasnip = "󰩫";
+      neorg = "";
+      nvim_lsp = "";
+      nvim_lua = "";
+      path = "";
+      spell = "";
+      treesitter = "󰔱";
+    };
   };
 
   highlight = {
@@ -226,11 +216,11 @@
   };
 
   keymaps = [
-    { 
-      key = "<CR>"; 
+    {
+      key = "<CR>";
       action = "cmp.mapping.confirm({select = false })";
     }
-    { 
+    {
       key = "<leader>g";
       action = "<cmd>Telescope live_grep<CR>";
     }
@@ -240,8 +230,8 @@
       key = "gd";
       action = "<cmd>Lspsaga goto_definition<CR>";
       options = {
-	desc = "Goto Definition";
-	silent = true;
+        desc = "Goto Definition";
+        silent = true;
       };
     }
     {
@@ -249,8 +239,8 @@
       key = "gr";
       action = "<cmd>Lspsaga finder ref<CR>";
       options = {
-	desc = "Goto References";
-	silent = true;
+        desc = "Goto References";
+        silent = true;
       };
     }
     {
@@ -258,8 +248,8 @@
       key = "gy";
       action = "<cmd>Lspsaga goto_type_definition<CR>";
       options = {
-	desc = "Goto Type Definition";
-	silent = true;
+        desc = "Goto Type Definition";
+        silent = true;
       };
     }
     {
@@ -267,8 +257,8 @@
       key = "<S-k>";
       action = "<cmd>Lspsaga hover_doc<CR>";
       options = {
-	desc = "Hover";
-	silent = true;
+        desc = "Hover";
+        silent = true;
       };
     }
     {
@@ -276,8 +266,8 @@
       key = "<leader>cw";
       action = "<cmd>Lspsaga outline<CR>";
       options = {
-	desc = "Outline";
-	silent = true;
+        desc = "Outline";
+        silent = true;
       };
     }
     {
@@ -285,8 +275,8 @@
       key = "<leader>cr";
       action = "<cmd>Lspsaga rename<CR>";
       options = {
-	desc = "Rename";
-	silent = true;
+        desc = "Rename";
+        silent = true;
       };
     }
     {
@@ -294,8 +284,8 @@
       key = "<leader>ca";
       action = "<cmd>Lspsaga code_action<CR>";
       options = {
-	desc = "Rename";
-	silent = true;
+        desc = "Rename";
+        silent = true;
       };
     }
     {
@@ -303,8 +293,8 @@
       key = "<leader>cd";
       action = "<cmd>Lspsaga show_line_diagnostics<CR>";
       options = {
-	desc = "Line diagnostics";
-	silent = true;
+        desc = "Line diagnostics";
+        silent = true;
       };
     }
     {
@@ -312,8 +302,8 @@
       key = "]d";
       action = "<cmd>Lspsaga diagnostic_jump_next<CR>";
       options = {
-	desc = "Next Diagnostic";
-	silent = true;
+        desc = "Next Diagnostic";
+        silent = true;
       };
     }
     {
@@ -321,10 +311,9 @@
       key = "]d";
       action = "<cmd>Lspsaga diagnostic_jump_prev<CR>";
       options = {
-	desc = "Previous Diagnostic";
-	silent = true;
+        desc = "Previous Diagnostic";
+        silent = true;
       };
     }
   ];
-
 }

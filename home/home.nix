@@ -1,12 +1,17 @@
-{config, pkgs, inputs, lib, osConfig, ...}:
-
-rec {
+{
+  config,
+  pkgs,
+  inputs,
+  lib,
+  osConfig,
+  ...
+}: rec {
   imports = [
     ./desktop-monitor-cfg.nix
     ./hyprland
   ];
 
-  home.username="gustavo";
+  home.username = "gustavo";
   home.homeDirectory = "/home/${home.username}";
   xdg.enable = true; # Sets XDG_CONFIG env vars
 
@@ -16,7 +21,7 @@ rec {
   # link all files in './scripts' to '~/.config/i3/scripts'
   # home.file.".config/i3/scripts" = {
   #   source = ./scripts;
-  #   recursive = true; # link recursively 
+  #   recursive = true; # link recursively
   #   executable = true; # make all files exec
   # };
 
@@ -35,8 +40,8 @@ rec {
     windowManager.awesome = {
       enable = true;
       luaModules = with pkgs.luaPackages; [
-	luarocks # package manager for lua modules
-	luadbi-mysql # database abstraction
+        luarocks # package manager for lua modules
+        luadbi-mysql # database abstraction
       ];
     };
 
@@ -60,105 +65,107 @@ rec {
   #   configDir = ./eww;
   # };
 
-  programs.rofi  = lib.mkIf osConfig.hyprlandwm.enable {
-    enable  = true;
-    pass.enable = false;  #  TODO: Set this up later
+  programs.rofi = lib.mkIf osConfig.hyprlandwm.enable {
+    enable = true;
+    pass.enable = false; #  TODO: Set this up later
   };
 
   # TODO: Move above to module  and  make a  flake for  waypaper  and swww
 
   # Packages that should be installed to the user profile
-  home.packages = (with pkgs; [
-    
-    neofetch # Looks cool
-    nnn # terminal file manager
+  home.packages =
+    (with pkgs; [
+      neofetch # Looks cool
+      nnn # terminal file manager
 
-    # archives
-    zip 
-    xz
-    unzip
-    p7zip
+      # archives
+      p7zip
+      unzip
+      xz
+      zip
 
-    # utils
-    ripgrep # recursively search directories for a regex
-    jq # command line json
-    yq-go # yaml processor https://github.com/mikefarah/yq
-    eza # modern replacement for ls
-    fzf # command line fuzzy find
-    fd # Better search
-    zoxide # smarter cd
-    clipboard-jh # Better, fancier clipboard 
-    xclip
-    xsel
-    yazi # Rust file manager
+      # utils
+      clipboard-jh # Better, fancier clipboard
+      eza # modern replacement for ls
+      fd # Better search
+      fzf # command line fuzzy find
+      jq # command line json
+      nushell # Better shell, in R U S T
+      ripgrep # recursively search directories for a regex
+      xclip
+      xsel
+      yazi # Rust file manager
+      yq-go # yaml processor https://github.com/mikefarah/yq
+      zoxide # smarter cd
 
-    # networking tools
-    mtr # network diagnostics
-    iperf3
-    dnsutils # dig + nslookup
-    ldns # drill, replacement for dig
-    aria2 # command line, lightweight, multiprotocol multi source download tool
-    socat # netcat but better
-    nmap # heheh
-    ipcalc # ip address calculator
+      # networking tools
+      aria2 # command line, lightweight, multiprotocol multi source download tool
+      dnsutils # dig + nslookup
+      ipcalc # ip address calculator
+      iperf3
+      ldns # drill, replacement for dig
+      mtr # network diagnostics
+      nmap # heheh
+      socat # netcat but better
 
-    # misc
-    file
-    which
-    tree
-    gnused
-    gnutar
-    gawk
-    zstd
-    gnupg
+      # misc
+      file
+      gawk
+      gnupg
+      gnused
+      gnutar
+      tree
+      which
+      zstd
 
-    # nix related
-    # provide 'nom' = nix + more output
-    nix-output-monitor
+      # nix related
+      alejandra # nix code formatting
+      nix-output-monitor # provide 'nom' = nix + more output
 
-    # productivity
-    hugo # static site generator
-    glow # markdown previewer for term
+      # productivity
+      hugo # static site generator
+      glow # markdown previewer for term
 
-    btop # htop but better?
-    iotop # io mon
-    iftop # ip mon
+      btop # htop but better?
+      iotop # io mon
+      iftop # ip mon
 
-    # sys call monitoring
-    strace # sys call
-    ltrace # lib call
-    lsof # list open files
+      # sys call monitoring
+      strace # sys call
+      ltrace # lib call
+      lsof # list open files
 
-    # sys tools
-    sysstat
-    lm_sensors # sensors command
-    ethtool
-    pciutils # lspci
-    usbutils # lsusb
+      # sys tools
+      sysstat
+      lm_sensors # sensors command
+      ethtool
+      pciutils # lspci
+      usbutils # lsusb
 
-    # Pretty fonts
-    nerd-fonts.iosevka
-    nerd-fonts.fira-code
-    nerd-fonts.droid-sans-mono
+      # Pretty fonts
+      nerd-fonts.iosevka
+      nerd-fonts.fira-code
+      nerd-fonts.droid-sans-mono
 
-    # Password Manager
-    bitwarden-cli
-    bitwarden-desktop
-    bitwarden-menu
+      # Password Manager
+      bitwarden-cli
+      bitwarden-desktop
+      bitwarden-menu
 
-    # Web apps
-    ferdium
+      # Web apps
+      ferdium
 
-    # Web browsers
-    firefox
-    qutebrowser
-  ]) ++ [ inputs.nixvim.packages.${pkgs.system}.nvim ];
+      # Web browsers
+      firefox
+      qutebrowser
+    ])
+    ++ [inputs.nixvim.packages.${pkgs.system}.nvim];
 
   programs.git = {
     enable = true; # live and die by the protocol
     userName = "Gustavo Delerue";
     userEmail = "gxdelerue@proton.me";
-  # userEmail = "gxdelerue@gmail.com";
+    # userEmail = "gxdelerue@gmail.com";
   };
 
   programs.lazygit.enable = true;
@@ -183,25 +190,25 @@ rec {
     settings = {
       env.TERM = "xterm-256color";
       font = lib.mkForce {
-	normal = {
-	  family = "Fira Code Nerd Font";
-	  style = "Regular";
-	};
+        normal = {
+          family = "Fira Code Nerd Font";
+          style = "Regular";
+        };
 
-	bold = {
-	  family = "Fira Code Nerd Font";
-	  style = "Bold";
-	};
+        bold = {
+          family = "Fira Code Nerd Font";
+          style = "Bold";
+        };
 
-	italic = {
-	  family = "Fira Code Nerd Font";
-	  style = "Italic";
-	};
+        italic = {
+          family = "Fira Code Nerd Font";
+          style = "Italic";
+        };
 
-	bold_italic = {
-	  family = "Fira Code Nerd Font";
-	  style = "Bold Italic";
-	};
+        bold_italic = {
+          family = "Fira Code Nerd Font";
+          style = "Bold Italic";
+        };
         size = 16;
       };
       scrolling.multiplier = 5;
@@ -237,7 +244,7 @@ rec {
 
   services.gnome-keyring = {
     enable = true;
-    components = [ "pkcs11" "secrets" "ssh" ];
+    components = ["pkcs11" "secrets" "ssh"];
   };
 
   fonts.fontconfig.enable = true;
