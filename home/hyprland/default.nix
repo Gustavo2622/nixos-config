@@ -9,7 +9,9 @@
     hyprland-hm-config.enable = lib.mkEnableOption "enable home manager hyprland config";
   };
 
-  imports = [];
+  imports = [
+    ./smart_gaps.nix
+  ];
 
   config = lib.mkIf config.hyprland-hm-config.enable {
     wayland.windowManager.hyprland = {
@@ -124,11 +126,13 @@
           "nofocus,class:^$,title:^$,xwayland:1,floating:1,fullscreen:0,pinned:0"
         ];
 
+
         # Startup programs
         exec-once = [
           "[workspace 1 silent; fullscreen] kitty btop"
           "[workspace 2 silent; fullscreen] qutebrowser"
           "[workspace 3 silent] alacritty"
+	  "[workspace 9 silent; fullscreen] super-productivity"
         ];
 
         "plugin:borders-plus-plus" = {
@@ -144,5 +148,6 @@
         };
       };
     };
+    hyprland-smart-gaps.enable = true;
   };
 }

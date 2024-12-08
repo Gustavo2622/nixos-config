@@ -58,14 +58,7 @@
 
   hyprland-hm-config.enable = osConfig.hyprlandwm.enable;
 
-  # Widgets for Wayland
-  # programs.eww = lib.mkIf osConfig.hyprlandwm.enable {
-  #   enable = true;
-  #   enableBashIntegration = true;
-  #   configDir = ./eww;
-  # };
-
-  programs.rofi = lib.mkIf osConfig.hyprlandwm.enable {
+  programs.rofi = {
     enable = true;
     pass.enable = false; #  TODO: Set this up later
   };
@@ -154,6 +147,9 @@
 
       # Web apps
       ferdium
+
+      # Todo app
+      super-productivity
 
       # Web browsers
       firefox
