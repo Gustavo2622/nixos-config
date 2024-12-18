@@ -126,14 +126,29 @@
           "nofocus,class:^$,title:^$,xwayland:1,floating:1,fullscreen:0,pinned:0"
         ];
 
+	workspace = [
+	  "1, monitor:DVI-D-1, default:true"
+	  "2, monitor:DP-1, default:true"
+	  "9, monitor:HDMI-A-1, default:true"
+
+	  "3, monitor:DP-1"
+	  "4, monitor:DVI-D-1"
+	  "5, monitor:DP-1"
+	  "6, monitor:DVI-D-1"
+	  "6, monitor:DVI-D-1"
+	];
 
         # Startup programs
-        exec-once = [
-          "[workspace 1 silent; fullscreen] kitty btop"
-          "[workspace 2 silent; fullscreen] qutebrowser"
-          "[workspace 3 silent] alacritty"
-	  "[workspace 9 silent; fullscreen] super-productivity"
-        ];
+	exec-once = [
+	  "[workspace 1 silent] alacritty"
+	  "[workspace 2 silent; fullscreen] qutebrowser"
+	  "[workspace 3 silent; fullscreen] ferdium"
+	  "[workspace 4 silent; fullscreen] super-productivity"
+	  "[workspace 5 silent; fullscreen] bitwarden"
+	  "[workspace 6 silent; fullscreen] obsidian"
+	  "[workspace 7 silent; fullscreen] anki"
+	  "[workspace 9 silent; fullscreen] kitty btop"
+	];
 
         "plugin:borders-plus-plus" = {
           add_borders = 1;

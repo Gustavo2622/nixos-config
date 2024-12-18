@@ -151,6 +151,12 @@
       # Todo app
       super-productivity
 
+      # SRS system
+      anki-bin
+
+      # Note taking and organization
+      obsidian
+
       # Web browsers
       firefox
       qutebrowser

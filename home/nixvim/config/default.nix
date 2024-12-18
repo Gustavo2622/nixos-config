@@ -20,6 +20,11 @@
     luasnip.enable = true;
     telescope.enable = true;
     lazygit.enable = true;
+    diffview.enable = true;
+    direnv.enable = true;
+    gitsigns.enable = true;
+    neogit.enable = true;
+    neo-tree.enable = true;
   };
 
   # Setup lsps
