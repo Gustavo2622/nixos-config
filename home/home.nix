@@ -145,6 +145,9 @@
       bitwarden-desktop
       bitwarden-menu
 
+      # Video player
+      mpv
+
       # Web apps
       ferdium
 

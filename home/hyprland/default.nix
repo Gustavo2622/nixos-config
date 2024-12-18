@@ -135,7 +135,7 @@
 	  "4, monitor:DVI-D-1"
 	  "5, monitor:DP-1"
 	  "6, monitor:DVI-D-1"
-	  "6, monitor:DVI-D-1"
+	  "7, monitor:DVI-D-1"
 	];
 
         # Startup programs
