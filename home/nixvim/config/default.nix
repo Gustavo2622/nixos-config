@@ -35,11 +35,19 @@
       lua_ls.enable = true;
       ocamllsp = {
         enable = true;
-        package = null; # maybe get the package directly later?
+        package = null; # package coming from specific flakes, to keep in line with used OCaml version 
         autostart = true;
       };
+      # for C/C++
+      clangd.enable = true;
 
-      # rust-analyzer.enable = true;
+      # for GLSL (shaders)
+      glsl_analyzer.enable = true;
+
+      rust-analyzer = {
+	enable = true;
+	package = null; # get in specific dev environments to keep in line with envs
+      };
     };
   };
 

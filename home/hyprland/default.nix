@@ -141,7 +141,7 @@
         # Startup programs
 	exec-once = [
 	  "[workspace 1 silent] alacritty"
-	  "[workspace 2 silent; fullscreen] qutebrowser"
+	  "[workspace 2 silent; fullscreen] firefox"
 	  "[workspace 3 silent; fullscreen] ferdium"
 	  "[workspace 4 silent; fullscreen] super-productivity"
 	  "[workspace 5 silent; fullscreen] bitwarden"

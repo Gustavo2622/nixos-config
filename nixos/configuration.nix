@@ -49,8 +49,31 @@
     home-manager.users.gustavo = import args.hmConfig;
 
     # Bootloader.
-    boot.loader.systemd-boot.enable = true;
-    boot.loader.efi.canTouchEfiVariables = true;
+    boot.loader = 
+    let
+      efi-shell-rel-path = "efi/shell.efi";
+      efi-shell-path = "/${efi-shell-rel-path}";
+    in
+    {
+      efi.canTouchEfiVariables = true;
+      systemd-boot = {
+	enable = true;
+	configurationLimit = 20;
+#	sortKey = "nixos";
+
+	# Copy EDK2 Shell to boot partition
+	extraFiles."${efi-shell-rel-path}" = "${pkgs.edk2-uefi-shell}/shell.efi";
+	extraEntries = {
+	# Make EDK2 Shell available as boot option
+	"edk2-uefi-shell.conf" = ''
+	  title EDK2 UEFI Shell
+	  efi ${efi-shell-path}
+	  sort-key y_edk2
+	'';
+	};
+      };
+    };
+
 
     networking = {
       hostName = "gustavo-Desktop"; # Define your hostname.

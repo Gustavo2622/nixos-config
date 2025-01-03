@@ -21,6 +21,7 @@
       # to avoid problems due to version mismatch
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    flake-parts.url = "github:hercules-ci/flake-parts";
     hyprland = {
       url = "github:hyprwm/Hyprland";
     };
@@ -29,8 +30,7 @@
       inputs.hyprland.follows = "hyprland";
     };
     nixvim = {
-      url = "./home/nixvim";
-
+      url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     stylix = {
@@ -60,26 +60,39 @@
     forAllSystems = nixpkgs.lib.genAttrs systems;
     nixOsConfig = ./nixos/configuration.nix;
     hmConfig = ./home/home.nix;
-  in {
+    nixvimLib = inputs.nixvim.lib.x86_64-linux;
+    nixvim' = inputs.nixvim.legacyPackages.x86_64-linux;
+    nixvimModule = {
+      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+      module = ./home/nixvim/config;
+      extraSpecialArgs = {
+	# Any extra args to nixvim module
+      };
+    };
+    nvim = nixvim'.makeNixvimWithModule nixvimModule;
+  in rec {
     packages =
-      forAllSystems (system: import ./pkgs nixpkgs.legacyPackages.${system})
-      // inputs.nixvim.packages;
+      forAllSystems (system: (import ./pkgs nixpkgs.legacyPackages.${system})
+      // { inherit nvim; });
     formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
 
     overlays = import ./overlays {inherit inputs;};
     nixosModules = import ./modules/nixos;
     homeManagerModules = import ./modules/home-manager;
     nixosConfigurations = {
-      gustavo-Desktop = nixpkgs.lib.nixosSystem rec {
-        system = "x86_64-linux";
-        specialArgs = {inherit inputs outputs home-manager hmConfig;}; # Extra params to configuration
-        modules = [
-          nixOsConfig
+      gustavo-Desktop = let 
+	pkgs = import nixpkgs { inherit overlays; };
+      in
+      nixpkgs.lib.nixosSystem rec {
+	system = "x86_64-linux";
+	specialArgs = {inherit inputs outputs home-manager hmConfig;}; # Extra params to configuration
+	modules = [
+	  nixOsConfig
 
-          # make home-manager as a module of nixos
-          # so that its config will be deployed automatically
-          inputs.stylix.nixosModules.stylix
-        ];
+	  # make home-manager as a module of nixos
+	  # so that its config will be deployed automatically
+	  inputs.stylix.nixosModules.stylix
+	];
       };
     };
 

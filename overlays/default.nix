@@ -6,6 +6,11 @@
   # Change versions, add patches, set compilation flags, anything
   # https://nixos.wiki/wiki/Overlays
   modifications = final: prev: {
+    anki-bin = prev.anki-bin.overrideAttrs (old: {
+      postInstall = ''
+	wrapProgram "$out/bin/anki" --suffix LD_LOAD_PATH "${final.xorg.libxshmfence}/lib/"
+      '';
+    });
     # example = prev.example.overrideAttrs (oldAttrs: rec {
     # ...
     # });

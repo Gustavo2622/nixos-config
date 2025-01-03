@@ -2,6 +2,7 @@
   config,
   pkgs,
   inputs,
+  outputs,
   lib,
   osConfig,
   ...
@@ -164,7 +165,7 @@
       firefox
       qutebrowser
     ])
-    ++ [inputs.nixvim.packages.${pkgs.system}.nvim];
+    ++ [outputs.packages.${pkgs.system}.nvim];
 
   programs.git = {
     enable = true; # live and die by the protocol
