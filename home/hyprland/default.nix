@@ -99,6 +99,7 @@
             "$mod, Return, exec, alacritty"
             "$mod, Q, exec, qutebrowser"
             "$mod, K, exec, kitty"
+	    "$mod, B, exec, brave"
             "$mod, C, killactive"
             "$mod, V, togglefloating"
             "$mod, R, exec, rofi -show drun"
@@ -116,6 +117,7 @@
                 in [
                   "$mod, code:1${toString i}, workspace, ${toString ws}"
                   "$mod SHIFT, code:1${toString i}, movetoworkspace, ${toString ws}"
+		  "$mod CTRL, code:1${toString i}, focusworkspaceoncurrentmonitor, ${toString ws}"
                 ]
               )
               9)
@@ -140,8 +142,9 @@
 
         # Startup programs
 	exec-once = [
+	  "waybar 2>&1 > ~/waybar_log.txt"
 	  "[workspace 1 silent] alacritty"
-	  "[workspace 2 silent; fullscreen] firefox"
+	  "[workspace 2 silent; fullscreen] brave"
 	  "[workspace 3 silent; fullscreen] ferdium"
 	  "[workspace 4 silent; fullscreen] super-productivity"
 	  "[workspace 5 silent; fullscreen] bitwarden"
@@ -164,5 +167,8 @@
       };
     };
     hyprland-smart-gaps.enable = true;
+
+    # hyprland depends on kitty
+    programs.kitty.enable = true;
   };
 }

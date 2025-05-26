@@ -10,6 +10,10 @@
   imports = [
     ./desktop-monitor-cfg.nix
     ./hyprland
+    ./waybar
+    ./terminal.nix
+    ./multimedia.nix
+    ./productivity.nix
   ];
 
   home.username = "gustavo";
@@ -58,13 +62,14 @@
   desktop-monitor-cfg.enable = lib.mkIf osConfig.awesomewm.enable true;
 
   hyprland-hm-config.enable = osConfig.hyprlandwm.enable;
+  waybar-hm-config.enable = osConfig.hyprlandwm.enable;
 
   programs.rofi = {
     enable = true;
     pass.enable = false; #  TODO: Set this up later
   };
 
-  # TODO: Move above to module  and  make a  flake for  waypaper  and swww
+  # TODO: Move above to module and make a flake for waypaper and swww
 
   # Packages that should be installed to the user profile
   home.packages =
@@ -145,25 +150,9 @@
       bitwarden-cli
       bitwarden-desktop
       bitwarden-menu
-
-      # Video player
-      mpv
-
+ 
       # Web apps
       ferdium
-
-      # Todo app
-      super-productivity
-
-      # SRS system
-      anki-bin
-
-      # Note taking and organization
-      obsidian
-
-      # Web browsers
-      firefox
-      qutebrowser
     ])
     ++ [outputs.packages.${pkgs.system}.nvim];
 
@@ -176,78 +165,13 @@
 
   programs.lazygit.enable = true;
 
-  # pretty prompts for shells
-  programs.starship = {
-    enable = true;
-
-    settings = {
-      add_newline = false;
-
-      aws.disabled = true;
-      gcloud.disabled = true;
-      line_break.disabled = true;
-    };
-  };
-
-  # come back to me, terminal emulator
-  programs.alacritty = {
-    enable = true;
-    # custom settings
-    settings = {
-      env.TERM = "xterm-256color";
-      font = lib.mkForce {
-        normal = {
-          family = "Fira Code Nerd Font";
-          style = "Regular";
-        };
-
-        bold = {
-          family = "Fira Code Nerd Font";
-          style = "Bold";
-        };
-
-        italic = {
-          family = "Fira Code Nerd Font";
-          style = "Italic";
-        };
-
-        bold_italic = {
-          family = "Fira Code Nerd Font";
-          style = "Bold Italic";
-        };
-        size = 16;
-      };
-      scrolling.multiplier = 5;
-      selection.save_to_clipboard = true;
-    };
-  };
-
-  # another term emulator, also hyprland dep
-  programs.kitty.enable = true;
-
-  programs.bash = {
-    enable = true;
-    enableCompletion = true;
-    # TODO add custom bashrc here
-    bashrcExtra = ''
-      export PATH="$PATH:$HOME/bin:$HOME/.local/bin"
-    '';
-
-    # set some aliases
-    shellAliases = {
-      urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
-      urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
-    };
-  };
-
-  programs.tmux.enable = true;
-
   programs.direnv = {
     enable = true;
     enableBashIntegration = true;
     nix-direnv.enable = true;
   };
 
+  ## Fix this
   services.gnome-keyring = {
     enable = true;
     components = ["pkcs11" "secrets" "ssh"];

@@ -8,6 +8,7 @@
   inputs,
   outputs,
   home-manager,
+  hmConfig,
   ...
 } @ args: {
   imports = [
@@ -29,7 +30,7 @@
     # ../modules/config/desktop-monitor-cfg.nix
   ];
 
-  config = {
+  config = rec {
     # Nix config
     nix = {
       package = pkgs.nixVersions.latest;
@@ -46,7 +47,7 @@
     home-manager.extraSpecialArgs = {inherit inputs outputs;}; # Extra params to home-manager
     home-manager.backupFileExtension = "bck";
 
-    home-manager.users.gustavo = import args.hmConfig;
+    home-manager.users.gustavo = import hmConfig;
 
     # Bootloader.
     boot.loader = 
@@ -128,7 +129,7 @@
     services.printing.enable = true;
 
     # Enable sound with pipewire.
-    hardware.pulseaudio.enable = false;
+    services.pulseaudio.enable = false;
     security.rtkit.enable = true;
     services.pipewire = {
       enable = true;
@@ -169,18 +170,25 @@
     # systemd.services."autovt@tty1".enable = false;
     systemd.services.nix-daemon.environment.TMPDIR = "/var/tmp";
 
-    # Install firefox.
-    programs.firefox.enable = true;
+    # Install nix-ld to run non-nixos binaries
+    programs.nix-ld = {
+      enable = true;
+      libraries = with pkgs; [
+	stdenv.cc.cc
+      ];
+    };
 
     # Allow unfree packages
     nixpkgs.config.allowUnfree = true;
+    environment.variables.NIXPKGS_ALLOW_UNFREE = 1;
 
-    # Enable Flaken and nix-commands features
+    # Enable Flakes and nix-commands features
     nix.settings.experimental-features = ["nix-command" "flakes"];
 
     # List packages installed in system profile. To search, run:
     # $ nix search wget
-    environment.systemPackages = with pkgs; [
+    environment.systemPackages = (with pkgs; [
+      brave
       vim
       zenith-nvidia
       neovim
@@ -190,9 +198,12 @@
       nix-output-monitor
       nvd
       wget
-    ];
+      linuxPackages.perf
+      ssh-to-age # to allow secrets management
+      sops
+    ]); 
     environment.variables.EDITOR = "nvim";
-    environment.variables.FLAKE = "/etc/nixos"; # for nh
+    environment.variables.NH_FLAKE = "/etc/nixos"; # for nh
 
     fonts.fontDir.enable = true;
 
@@ -260,13 +271,13 @@
       polarity = "dark";
     };
 
-    awesomewm.enable = lib.mkDefault true;
+    hyprlandwm.enable = lib.mkDefault true;
 
     specialisation = {
-      hyprland = {
+      awesome = {
         configuration = {
-          awesomewm.enable = lib.mkOverride 950 false;
-          hyprlandwm.enable = lib.mkOverride 950 true;
+          awesomewm.enable = lib.mkOverride 950 true;
+          hyprlandwm.enable = lib.mkOverride 950 false;
         };
       };
     };

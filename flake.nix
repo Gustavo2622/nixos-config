@@ -51,6 +51,7 @@
     self,
     nixpkgs,
     home-manager,
+    sops-nix,
     ...
   } @ inputs: let
     inherit (self) outputs;
@@ -88,6 +89,18 @@
 	specialArgs = {inherit inputs outputs home-manager hmConfig;}; # Extra params to configuration
 	modules = [
 	  nixOsConfig
+
+	  # Sops for secret management
+	  sops-nix.nixosModules.sops {
+	    sops = {
+	      defaultSopsFile = ./secrets/secrets.yaml;
+
+	      age.sshKeyPaths = ["/etc/.ssh/id_ed25519"];
+	      secrets = {
+		"bitwarden/master-pass" = {};
+	      };
+	    };
+	  }
 
 	  # make home-manager as a module of nixos
 	  # so that its config will be deployed automatically

@@ -44,9 +44,18 @@
       # for GLSL (shaders)
       glsl_analyzer.enable = true;
 
-      rust-analyzer = {
+      # Just activate the interface plugin everything else comes from dev env
+      # this ensures version matching to whatever the project is using
+      rust_analyzer = {
 	enable = true;
-	package = null; # get in specific dev environments to keep in line with envs
+	package = null; # these should come from specific dev envs
+	installCargo = false; # these should come from specific dev envs
+	installRustc = false; # these should come from specific dev envs
+      };
+      zls = {
+	enable = true;
+	package = null; # Package coming from dev environments
+	autostart = true;
       };
     };
   };
@@ -321,7 +330,7 @@
     }
     {
       mode = "n";
-      key = "]d";
+      key = "[d";
       action = "<cmd>Lspsaga diagnostic_jump_prev<CR>";
       options = {
         desc = "Previous Diagnostic";
