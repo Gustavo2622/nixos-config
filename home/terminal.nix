@@ -64,8 +64,9 @@
     programs.ghostty = {
       enable = true;
       enableBashIntegration = true;
-      settings = {
+      settings = {	
 	font-size = 16;
+	font-family = lib.mkForce "Iosevka NFM";
 	keybind = [
 	  "ctrl+h=goto_split:left"
 	  "ctrl+l=goto_split:right"
