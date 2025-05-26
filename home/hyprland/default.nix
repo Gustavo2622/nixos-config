@@ -7,13 +7,26 @@
 } @ args: {
   options = {
     hyprland-hm-config.enable = lib.mkEnableOption "enable home manager hyprland config";
+    hyprland-hm-config.term = lib.mkOption {
+      type = lib.types.str;
+      default = "kitty";
+      example = "kitty";
+    };
+    hyprland-hm-config.web_browser = lib.mkOption {
+      type = lib.types.str;
+      default = "firefox";
+      example = "firefox";
+    };
   };
 
   imports = [
     ./smart_gaps.nix
   ];
 
-  config = lib.mkIf config.hyprland-hm-config.enable {
+  config = 
+  let 
+    inherit (config.hyprland-hm-config) term web_browser;
+  in lib.mkIf config.hyprland-hm-config.enable {
     wayland.windowManager.hyprland = {
       enable = true;
       package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
@@ -96,10 +109,9 @@
         bind =
           [
             "$mod, F, fullscreen"
-            "$mod, Return, exec, alacritty"
-            "$mod, Q, exec, qutebrowser"
+            "$mod, Return, exec, ${term}"
             "$mod, K, exec, kitty"
-	    "$mod, B, exec, brave"
+	    "$mod, B, exec, ${web_browser}"
             "$mod, C, killactive"
             "$mod, V, togglefloating"
             "$mod, R, exec, rofi -show drun"
@@ -143,14 +155,14 @@
         # Startup programs
 	exec-once = [
 	  "waybar 2>&1 > ~/waybar_log.txt"
-	  "[workspace 1 silent] alacritty"
-	  "[workspace 2 silent; fullscreen] brave"
+	  "[workspace 1 silent] ${term}"
+	  "[workspace 2 silent; fullscreen] ${web_browser}"
 	  "[workspace 3 silent; fullscreen] ferdium"
 	  "[workspace 4 silent; fullscreen] super-productivity"
 	  "[workspace 5 silent; fullscreen] bitwarden"
 	  "[workspace 6 silent; fullscreen] obsidian"
 	  "[workspace 7 silent; fullscreen] anki"
-	  "[workspace 9 silent; fullscreen] kitty btop"
+	  "[workspace 9 silent; fullscreen] ${term} btop"
 	];
 
         "plugin:borders-plus-plus" = {

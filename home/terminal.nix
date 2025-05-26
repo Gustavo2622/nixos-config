@@ -7,10 +7,14 @@
   osConfig,
   ...
 }: rec {
-  imports = [];
+  imports = [
+    ./hyprland
+  ];
   options = {};
   config = {
     ## Terminal Emulators ##
+    # Set hyprland terminal emulator
+    hyprland-hm-config.term = "ghostty";
 
     # come back to me, terminal emulator
     programs.alacritty = {

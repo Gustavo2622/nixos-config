@@ -95,7 +95,7 @@
 	    sops = {
 	      defaultSopsFile = ./secrets/secrets.yaml;
 
-	      age.sshKeyPaths = ["/etc/.ssh/id_ed25519"];
+	      age.sshKeyPaths = ["/home/gustavo/.ssh/id_ed25519"];
 	      secrets = {
 		"bitwarden/master-pass" = {};
 	      };

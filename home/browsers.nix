@@ -7,9 +7,14 @@
   osConfig,
   ...
 }: rec {
-  imports = [];
+  imports = [
+    ./hyprland/
+  ];
   options = {};
   config = {
+    # Set default browser for hyprland
+    hyprland-hm-config.web_browser = "brave";
+
     home.packages = 
     (with pkgs; [
       firefox
