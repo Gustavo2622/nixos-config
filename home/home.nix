@@ -14,6 +14,7 @@
     ./terminal.nix
     ./multimedia.nix
     ./productivity.nix
+    ./browsers.nix
   ];
 
   home.username = "gustavo";
