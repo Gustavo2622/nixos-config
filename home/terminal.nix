@@ -14,7 +14,10 @@
   config = {
     ## Terminal Emulators ##
     # Set hyprland terminal emulator
-    hyprland-hm-config.term = "ghostty";
+    hyprland-hm-config.term = rec {
+      exe = "ghostty";
+      run_subcommand = exe + " -e"; 
+    };
 
     # come back to me, terminal emulator
     programs.alacritty = {

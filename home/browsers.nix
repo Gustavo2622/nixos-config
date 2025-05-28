@@ -8,7 +8,7 @@
   ...
 }: rec {
   imports = [
-    ./hyprland/
+    ./hyprland
   ];
   options = {};
   config = {

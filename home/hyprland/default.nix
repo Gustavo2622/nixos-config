@@ -5,15 +5,27 @@
   pkgs,
   ...
 } @ args: {
-  options = {
-    hyprland-hm-config.enable = lib.mkEnableOption "enable home manager hyprland config";
-    hyprland-hm-config.term = lib.mkOption {
-      type = lib.types.str;
-      default = "kitty";
-      example = "kitty";
+  options = with lib; {
+    hyprland-hm-config.enable = mkEnableOption "enable home manager hyprland config";
+    hyprland-hm-config.term = mkOption {
+      description = "Terminal to use with hyprland";
+      type = with types; submodule {
+	options = rec {
+	  exe = mkOption {
+	    type = str;
+	    example = "kitty";
+	    default = "kitty";
+	  };
+	  run_subcommand = mkOption {
+	    type = str;
+	    example = "kitty";
+	    default = exe;
+	  };
+	};
+      };
     };
-    hyprland-hm-config.web_browser = lib.mkOption {
-      type = lib.types.str;
+    hyprland-hm-config.web_browser = mkOption {
+      type = types.str;
       default = "firefox";
       example = "firefox";
     };
@@ -109,7 +121,7 @@
         bind =
           [
             "$mod, F, fullscreen"
-            "$mod, Return, exec, ${term}"
+            "$mod, Return, exec, ${term.exe}"
             "$mod, K, exec, kitty"
 	    "$mod, B, exec, ${web_browser}"
             "$mod, C, killactive"
@@ -155,14 +167,14 @@
         # Startup programs
 	exec-once = [
 	  "waybar 2>&1 > ~/waybar_log.txt"
-	  "[workspace 1 silent] ${term}"
+	  "[workspace 1 silent] ${term.exe}"
 	  "[workspace 2 silent; fullscreen] ${web_browser}"
 	  "[workspace 3 silent; fullscreen] ferdium"
 	  "[workspace 4 silent; fullscreen] super-productivity"
 	  "[workspace 5 silent; fullscreen] bitwarden"
 	  "[workspace 6 silent; fullscreen] obsidian"
 	  "[workspace 7 silent; fullscreen] anki"
-	  "[workspace 9 silent; fullscreen] ${term} btop"
+	  "[workspace 9 silent; fullscreen] ${term.run_subcommand} btop"
 	];
 
         "plugin:borders-plus-plus" = {
