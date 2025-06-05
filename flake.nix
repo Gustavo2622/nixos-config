@@ -57,24 +57,25 @@
     inherit (self) outputs;
     systems = [
       "x86_64-linux"
+      "aarch64-darwin"
     ];
     forAllSystems = nixpkgs.lib.genAttrs systems;
     nixOsConfig = ./nixos/configuration.nix;
     hmConfig = ./home/home.nix;
-    nixvimLib = inputs.nixvim.lib.x86_64-linux;
-    nixvim' = inputs.nixvim.legacyPackages.x86_64-linux;
-    nixvimModule = {
-      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+    nixvimLib = system: inputs.nixvim.lib.${system};
+    nixvim' = system: inputs.nixvim.legacyPackages.${system};
+    nixvimModule = system: {
+      pkgs = nixpkgs.legacyPackages.${system};
       module = ./home/nixvim/config;
       extraSpecialArgs = {
 	# Any extra args to nixvim module
       };
     };
-    nvim = nixvim'.makeNixvimWithModule nixvimModule;
+    nvim = system: (nixvim' system).makeNixvimWithModule (nixvimModule system);
   in rec {
     packages =
       forAllSystems (system: (import ./pkgs nixpkgs.legacyPackages.${system})
-      // { inherit nvim; });
+      // { nvim = (nvim system); });
     formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
 
     overlays = import ./overlays {inherit inputs;};
