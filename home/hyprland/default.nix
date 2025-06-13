@@ -170,10 +170,10 @@
 	  "[workspace 1 silent] ${term.exe}"
 	  "[workspace 2 silent; fullscreen] ${web_browser}"
 	  "[workspace 3 silent; fullscreen] ferdium"
-	  "[workspace 4 silent; fullscreen] super-productivity"
+	  "[workspace 4 silent; fullscreen] anki"
 	  "[workspace 5 silent; fullscreen] bitwarden"
 	  "[workspace 6 silent; fullscreen] obsidian"
-	  "[workspace 7 silent; fullscreen] anki"
+	  "[workspace 7 silent; fullscreen] discord" 
 	  "[workspace 9 silent; fullscreen] ${term.run_subcommand} btop"
 	];
 

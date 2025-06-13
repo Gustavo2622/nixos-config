@@ -18,10 +18,7 @@
 	# Note taking and all that magic
 	obsidian
 
-	# Task management
-	super-productivity
-	# Find some more for here
-
+	# TODO: Find some more for here
       ]);
   };
 }
