@@ -28,6 +28,9 @@
     ./hyprlandwm.nix
     # autorandr settings for x11
     # ../modules/config/desktop-monitor-cfg.nix
+    
+    # Virtual Machine management
+    ./virtualisation.nix
   ];
 
   config = rec {
@@ -75,6 +78,16 @@
       };
     };
 
+
+    # NTFS support to be able to interface with Windows FS
+    boot.supportedFilesystems = [ "ntfs" ];
+
+    # Mount windows fs at /mnt/windows on boot as RW
+    fileSystems."/mnt/windows" = 
+      { device = "/dev/sdb2";
+	fsType = "ntfs-3g";
+	options = [ "rw" "uid=1000" ];
+      };
 
     networking = {
       hostName = "gustavo-Desktop"; # Define your hostname.
@@ -189,18 +202,19 @@
     # $ nix search wget
     environment.systemPackages = (with pkgs; [
       brave
-      vim
-      zenith-nvidia
-      neovim
       git
       kitty # for hyprland
+      linuxPackages.perf
+      neovim
       nh
       nix-output-monitor
       nvd
-      wget
-      linuxPackages.perf
-      ssh-to-age # to allow secrets management
       sops
+      ssh-to-age # to allow secrets management
+      udisks2
+      vim
+      wget
+      zenith-nvidia
     ]); 
     environment.variables.EDITOR = "nvim";
     environment.variables.NH_FLAKE = "/etc/nixos"; # for nh
@@ -238,7 +252,10 @@
     security.pam.services.sddm.enableGnomeKeyring = true;
 
     # Enable the OpenSSH daemon.
-    # services.openssh.enable = true;
+    services.openssh = {
+      enable = true;
+#      allowSFTP = true;
+    };
 
     # Open ports in the firewall.
     # networking.firewall.allowedTCPPorts = [ ... ];

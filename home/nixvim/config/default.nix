@@ -60,6 +60,8 @@
     };
   };
 
+  plugins.typescript-tools.enable = true;
+
   # Better LSP
   plugins.lspsaga = {
     enable = true;
