@@ -1,2 +1,16 @@
 result
 result-*
+
+# LaTeX build artifacts
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.bbl
+*.blg
+*.toc
+*.out
+*.nav
+*.snm
+*.vrb
