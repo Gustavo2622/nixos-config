@@ -45,6 +45,8 @@
     # ./sops.nix
     ./ssh.nix
     ./steam.nix
+    ./syncthing.nix
+    ./tailscale.nix
     ./stylix.nix
     ./user.nix
     ./utils.nix

@@ -1,13 +1,13 @@
-# OpenSSH on port 22 with SFTP, root login disabled, password and
-# keyboard-interactive auth allowed.
-{lib, ...} @ args: {
+# OpenSSH: key-only auth, no root login, SFTP enabled.
+# Password auth disabled — use SSH keys distributed via Tailscale.
+_: {
   services.openssh = {
     enable = true;
     allowSFTP = true;
     settings = {
-      PermitRootLogin = "no"; # No root logins from SSH
-      PasswordAuthentication = true; # Allow keyboard auth
-      KbdInteractiveAuthentication = true;
+      PermitRootLogin = "no";
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
     };
     ports = [22];
   };

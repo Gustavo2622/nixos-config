@@ -1,5 +1,5 @@
 # Hostname from variables.nix, NetworkManager, DHCP, NTP pool; firewall opens
-# TCP/UDP 22/80/443 and 59010-59011.
+# TCP 22/80/443. Additional ports opened by service-specific modules.
 {
   pkgs,
   lib,
@@ -21,14 +21,8 @@ in {
         22
         80
         443
-        59010
-        59011
-        8080
       ];
-      allowedUDPPorts = [
-        59010
-        59011
-      ];
+      allowedUDPPorts = [];
     };
   };
   environment.systemPackages = with pkgs; [networkmanagerapplet];
