@@ -1,10 +1,9 @@
 {
   pkgs,
   lib,
+  vars,
   ...
-}: let
-  vars = import ../../variables.nix;
-in {
+}: {
   programs.alacritty = let
     font_family = vars.fontName;
   in {

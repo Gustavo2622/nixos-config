@@ -2,9 +2,9 @@
   config,
   pkgs,
   lib,
+  vars,
   ...
 }: let
-  vars = import ../../variables.nix;
   extraMonitorSettings = vars.extraMonitorSettings or "";
   keyboardLayout = vars.keyboardLayout or "us";
   keyboardVariant = vars.keyboardVariant or "";

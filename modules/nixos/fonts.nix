@@ -35,4 +35,3 @@
     fontconfig.enable = true;
   };
 }
-

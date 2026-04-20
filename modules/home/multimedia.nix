@@ -11,14 +11,13 @@
   imports = [];
   options = {};
   config = {
-    home.packages =
-      (with pkgs; [
-	# Video player
-	mpv
+    home.packages = with pkgs; [
+      # Video player
+      mpv
 
-	# Music player
-	tauon
-	nuclear
-    ]);
+      # Music player
+      tauon
+      nuclear
+    ];
   };
 }

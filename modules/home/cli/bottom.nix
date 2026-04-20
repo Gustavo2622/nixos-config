@@ -9,21 +9,21 @@
         {
           ratio = 2;
           child = [
-            { type = "cpu"; }
-            { type = "temp"; }
+            {type = "cpu";}
+            {type = "temp";}
           ];
         }
         {
           ratio = 2;
           child = [
-            { type = "network"; }
+            {type = "network";}
           ];
         }
         {
           ratio = 3;
           child = [
-            { 
-              type = "proc"; 
+            {
+              type = "proc";
               ratio = 1;
               default = true;
             }

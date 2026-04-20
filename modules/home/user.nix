@@ -1,8 +1,10 @@
-{pkgs, ...}: 
-let 
-  inherit (import ../variables.nix) username;
-in
 {
+  pkgs,
+  vars,
+  ...
+}: let
+  inherit (vars) username;
+in {
   home = rec {
     inherit username;
     homeDirectory = "/home/${username}";

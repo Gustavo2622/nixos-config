@@ -1,5 +1,5 @@
 {pkgs, ...}: {
-  home.packages = with pkgs; [ nano ];
+  home.packages = with pkgs; [nano];
 
   # Manage ~/.nanorc
   home.file.".nanorc".text = ''

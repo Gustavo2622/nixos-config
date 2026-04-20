@@ -1,6 +1,9 @@
-{ pkgs, config, ... }:
 {
-  home.packages = with pkgs; [ pyprland ];
+  pkgs,
+  config,
+  ...
+}: {
+  home.packages = with pkgs; [pyprland];
 
   home.file."${config.xdg.configHome}/pypr/pyprland.toml".text = ''
     [pyprland]

@@ -6,10 +6,9 @@
   outputs,
   pkgs,
   self,
+  vars,
   ...
-}: let
-  vars = import ../variables.nix;
-in {
+}: {
   imports =
     [
       ./amfora.nix

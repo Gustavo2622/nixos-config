@@ -1,5 +1,4 @@
-_: let
-  vars = import ../../variables.nix;
+{vars, ...}: let
   inherit
     (vars)
     barChoice

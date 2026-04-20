@@ -6,5 +6,4 @@
     # EDITOR/VISUAL are set system-wide via modules/nixos/editor.nix
     alias cl="clear"
   '';
-
 }

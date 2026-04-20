@@ -2,10 +2,9 @@
   pkgs,
   config,
   lib,
+  vars,
   ...
-}: let
-  vars = import ../../variables.nix;
-in {
+}: {
   programs.kitty = {
     enable = true;
 
@@ -54,7 +53,7 @@ in {
       url_prefixes file ftp ftps gemini git gopher http https irc ircs kitty sftp ssh
       #detect_urls yes
 
-      
+
         # Clipboard
         map ctrl+shift+v        paste_from_selection
         map shift+insert        paste_from_selection

@@ -4,11 +4,9 @@
   lib,
   pkgs,
   ...
-}:
-let
+}: let
   inherit (nvf.lib.nvim) dag;
-in
-{
+in {
   # Actual nvim config options, separate to avoid mega indentation
   config.vim = {
     # Enable theming
@@ -27,7 +25,7 @@ in
       lspsaga.enable = true;
       trouble.enable = true;
 
-      servers.ocaml-lsp.cmd = lib.mkForce [ "ocamllsp" ];
+      servers.ocaml-lsp.cmd = lib.mkForce ["ocamllsp"];
     };
 
     # LaTeX Support — vimtex is a VimScript plugin; configure via Lua globals, no setup() call
@@ -85,20 +83,20 @@ in
       # nvf merges setupOpts.keymap lists with its own defaults by concatenation,
       # so lib.mkForce is required on every entry to replace rather than append.
       setupOpts.keymap = {
-        preset       = "none";
-        "<C-space>"  = lib.mkForce [ "show"                      "fallback" ];
+        preset = "none";
+        "<C-space>" = lib.mkForce ["show" "fallback"];
         # Explicitly clear <CR> — nvf default has ["accept" "fallback"]
-        "<CR>"       = lib.mkForce [ "fallback" ];
-        "<C-e>"      = lib.mkForce [ "hide"                      "fallback" ];
-        "<C-n>"      = lib.mkForce [ "select_next"               "fallback" ];
-        "<C-p>"      = lib.mkForce [ "select_prev"               "fallback" ];
+        "<CR>" = lib.mkForce ["fallback"];
+        "<C-e>" = lib.mkForce ["hide" "fallback"];
+        "<C-n>" = lib.mkForce ["select_next" "fallback"];
+        "<C-p>" = lib.mkForce ["select_prev" "fallback"];
         # Tab: confirm highlighted item → jump snippet forward → literal tab
-        "<Tab>"      = lib.mkForce [ "select_and_accept" "snippet_forward" "fallback" ];
+        "<Tab>" = lib.mkForce ["select_and_accept" "snippet_forward" "fallback"];
         # S-Tab: jump snippet backward (<C-p> handles completion navigation)
-        "<S-Tab>"    = lib.mkForce [ "snippet_backward"          "fallback" ];
+        "<S-Tab>" = lib.mkForce ["snippet_backward" "fallback"];
         # <M-f>/<M-b>: scroll docs — avoids <C-f> clash with Inkscape figure keybind in tex
-        "<M-f>"      = lib.mkForce [ "scroll_documentation_down" "fallback" ];
-        "<M-b>"      = lib.mkForce [ "scroll_documentation_up"   "fallback" ];
+        "<M-f>" = lib.mkForce ["scroll_documentation_down" "fallback"];
+        "<M-b>" = lib.mkForce ["scroll_documentation_up" "fallback"];
       };
     };
 
@@ -180,63 +178,68 @@ in
     additionalRuntimePaths = [
       "${flakePath}/dots/nvim"
     ];
-    luaConfigRC.hotswapLua = dag.entryAfter [ "flakeLua" ] /* lua */ ''
-      require("hotswap-lua")
-    '';
+    luaConfigRC.hotswapLua =
+      dag.entryAfter ["flakeLua"]
+      /*
+      lua
+      */
+      ''
+        require("hotswap-lua")
+      '';
 
     luaConfigRC.flakeLua =
       dag.entryAnywhere
-        # lua
-        ''
-          require("flake-lua")
-        '';
+      # lua
+      ''
+        require("flake-lua")
+      '';
 
     # Disable format-on-save globally; use <leader>lf for explicit formatting only.
     # Applies to all languages: nix, lua, rust, ocaml, etc.
     luaConfigRC.formatExplicitOnly =
-      dag.entryAfter [ "flakeLua" ]
-        # lua
-        ''
-          require("conform").setup({ format_on_save = nil })
-          vim.keymap.set("n", "<leader>lf", function()
-            require("conform").format({ async = true, lsp_fallback = true })
-          end, { desc = "Format buffer" })
-        '';
+      dag.entryAfter ["flakeLua"]
+      # lua
+      ''
+        require("conform").setup({ format_on_save = nil })
+        vim.keymap.set("n", "<leader>lf", function()
+          require("conform").format({ async = true, lsp_fallback = true })
+        end, { desc = "Format buffer" })
+      '';
 
     # :Diff3Way <ref> — 3-panel vimdiff: current file | merge-base | <ref>
     # Complements :DiffviewOpen HEAD...<ref> (2-panel, base-anchored).
     # Close with :diffoff | only
     luaConfigRC.diff3Way =
-      dag.entryAfter [ "flakeLua" ]
-        # lua
-        ''
-          vim.api.nvim_create_user_command("Diff3Way", function(opts)
-            local other = opts.args
-            local base = vim.fn.system("git merge-base HEAD " .. other):gsub("\n", "")
-            local file = vim.fn.expand("%")
+      dag.entryAfter ["flakeLua"]
+      # lua
+      ''
+        vim.api.nvim_create_user_command("Diff3Way", function(opts)
+          local other = opts.args
+          local base = vim.fn.system("git merge-base HEAD " .. other):gsub("\n", "")
+          local file = vim.fn.expand("%")
+          vim.cmd("diffthis")
+          local function open_ro(ref)
+            vim.cmd("vnew")
+            vim.cmd("0read !git show " .. ref .. ":" .. file)
+            vim.cmd("$delete _")      -- remove trailing blank line left by 0read
+            vim.bo.buftype    = "nofile"
+            vim.bo.modifiable = false
             vim.cmd("diffthis")
-            local function open_ro(ref)
-              vim.cmd("vnew")
-              vim.cmd("0read !git show " .. ref .. ":" .. file)
-              vim.cmd("$delete _")      -- remove trailing blank line left by 0read
-              vim.bo.buftype    = "nofile"
-              vim.bo.modifiable = false
-              vim.cmd("diffthis")
-            end
-            open_ro(base)
-            open_ro(other)
-          end, { nargs = 1, desc = "3-way diff: current | merge-base | <ref>" })
-        '';
+          end
+          open_ro(base)
+          open_ro(other)
+        end, { nargs = 1, desc = "3-way diff: current | merge-base | <ref>" })
+      '';
 
     # Load all tex snippets once at startup (not per-filetype open) and register
     # the FileType autocmd for LaTeX buffer settings (spell, conceal, inkscape keybinds).
     luaConfigRC.latexSetup =
-      dag.entryAfter [ "flakeLua" ]
-        # lua
-        ''
-          vim.g.latex_snippet_mode = "full"  -- runtime default; cycle with <leader>ls
-          require("snippets.init")           -- load all tex snippets once
-          require("latex-setup")             -- register FileType autocmd for tex buffers
-        '';
+      dag.entryAfter ["flakeLua"]
+      # lua
+      ''
+        vim.g.latex_snippet_mode = "full"  -- runtime default; cycle with <leader>ls
+        require("snippets.init")           -- load all tex snippets once
+        require("latex-setup")             -- register FileType autocmd for tex buffers
+      '';
   };
 }

@@ -1,10 +1,9 @@
 {
   pkgs,
   config,
+  vars,
   ...
-}: let
-  vars = import ../../variables.nix;
-in {
+}: {
   programs = {
     rofi = {
       enable = true;

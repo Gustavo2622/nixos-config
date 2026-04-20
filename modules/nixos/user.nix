@@ -5,11 +5,12 @@
   inputs,
   outputs,
   hmConfig,
+  vars,
+  theme,
   ...
 }: let
-  inherit (import ../variables.nix) username gitUsername;
-in
-{
+  inherit (vars) username gitUsername;
+in {
   imports = [
     inputs.home-manager.nixosModules.home-manager
   ];
@@ -17,9 +18,9 @@ in
     home-manager = {
       useUserPackages = true;
       useGlobalPkgs = false;
-      extraSpecialArgs = {inherit inputs username outputs;};
+      extraSpecialArgs = {inherit inputs username outputs vars theme;};
       backupFileExtension = "bck";
-      users.${username} = { 
+      users.${username} = {
         home = {
           username = "${username}";
           homeDirectory = "/home/${username}";
@@ -39,7 +40,7 @@ in
         "docker"
         "libvirtd"
         "lp"
-        "networkmanager" 
+        "networkmanager"
         "scanner"
         "vboxusers"
         "wheel"

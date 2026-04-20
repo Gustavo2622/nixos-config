@@ -1,6 +1,10 @@
 # Greetd login manager using tuigreet with --time flag; session launches Hyprland.
-{pkgs, ...}: let
-  inherit (import ../variables.nix) username;
+{
+  pkgs,
+  vars,
+  ...
+}: let
+  inherit (vars) username;
 in {
   services.greetd = {
     enable = true;

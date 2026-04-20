@@ -1,13 +1,16 @@
 # Stylix system theming: wallpaper, cursor, and fonts from variables.nix.
 # stylixMonoFont selects the system monospace font; stylixFontSizes sets per-context sizes.
-{pkgs, ...}:
-let
-  inherit (import ../variables.nix) stylixImage stylixMonoFont stylixFontSizes;
+{
+  pkgs,
+  vars,
+  ...
+}: let
+  inherit (vars) stylixImage stylixMonoFont stylixFontSizes;
   stylixMonoFontPkgs = {
     "JetBrains Mono" = pkgs.nerd-fonts.jetbrains-mono;
-    "Fira Code"      = pkgs.nerd-fonts.fira-code;
-    "Iosevka"        = pkgs.nerd-fonts.iosevka;
-    "Maple Mono NF"  = pkgs.maple-mono.NF;
+    "Fira Code" = pkgs.nerd-fonts.fira-code;
+    "Iosevka" = pkgs.nerd-fonts.iosevka;
+    "Maple Mono NF" = pkgs.maple-mono.NF;
   };
 in {
   stylix = {

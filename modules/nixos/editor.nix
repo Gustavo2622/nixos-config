@@ -9,7 +9,9 @@
     EDITOR = "nvim";
     VISUAL = "nvim";
   };
-  environment.systemPackages = (with pkgs; [
-    vim
-  ]) ++ [ neovim ];
+  environment.systemPackages =
+    (with pkgs; [
+      vim
+    ])
+    ++ [neovim];
 }

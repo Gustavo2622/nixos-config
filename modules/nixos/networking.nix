@@ -5,10 +5,11 @@
   lib,
   inputs,
   options,
+  vars,
   ...
-} : let
-  inherit (import ../variables.nix) host;
-in{
+}: let
+  inherit (vars) host;
+in {
   networking = {
     hostName = host;
     useDHCP = lib.mkForce true;

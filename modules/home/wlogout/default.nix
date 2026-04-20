@@ -1,6 +1,8 @@
-{config, ...}: let
-  vars = import ../../variables.nix;
-in {
+{
+  config,
+  vars,
+  ...
+}: {
   programs.wlogout = {
     enable = true;
     layout = [
@@ -105,4 +107,3 @@ in {
     recursive = true;
   };
 }
-

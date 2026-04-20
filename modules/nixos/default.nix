@@ -3,10 +3,9 @@
 {
   pkgs,
   inputs,
+  vars,
   ...
-}: let
-  vars = import ../variables.nix;
-in {
+}: {
   imports = [
     # Include graphics card configuration
     ./amdgpu.nix

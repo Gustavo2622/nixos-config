@@ -87,6 +87,8 @@
         overlays = [overlay-set];
       };
     flakePath = "${self}";
+    vars = import ./modules/variables {host = "desktop";};
+    theme = import ./modules/theme {themeName = vars.theme;};
     neovimModule = system:
       nvf.lib.neovimConfiguration {
         pkgs = pkgs system;
@@ -104,14 +106,13 @@
     );
     formatter = forAllSystems (system: alejandra.packages.${system}.default);
 
-    homeManagerModules = import ./modules/home;
     nixosConfigurations = let
       system = "x86_64-linux";
       inherit (neovimModule system) neovim;
     in {
       gustavo-Desktop = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = {inherit inputs outputs neovim home-manager hmConfig;}; # Extra params to configuration
+        specialArgs = {inherit inputs outputs neovim home-manager hmConfig vars theme;};
         modules = [
           {
             nixpkgs.overlays = [overlay-set];

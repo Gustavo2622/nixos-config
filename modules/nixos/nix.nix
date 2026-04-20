@@ -4,8 +4,7 @@
   lib,
   pkgs,
   ...
-}@args:
-{
+} @ args: {
   nix = {
     package = pkgs.nixVersions.latest;
     extraOptions = ''

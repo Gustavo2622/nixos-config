@@ -12,7 +12,7 @@ _: {
 
     # JACK settings
     jack.enable = true;
-    
+
     extraConfig.pipewire."92-low-latency" = {
       "context.properties" = {
         "default.clock.rate" = 48000;

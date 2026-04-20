@@ -1,11 +1,10 @@
-_: let
-  vars = import ../../variables.nix;
-in {
+{vars, ...}: {
   programs.waybar = {
     enable = true;
-    style = builtins.replaceStrings
-      [ "__UI_FONT__"    "__UI_FONT_SIZE__"         ]
-      [ vars.uiFontName  (toString vars.uiFontSize) ]
+    style =
+      builtins.replaceStrings
+      ["__UI_FONT__" "__UI_FONT_SIZE__"]
+      [vars.uiFontName (toString vars.uiFontSize)]
       (builtins.readFile ./style.css);
     settings = [
       {

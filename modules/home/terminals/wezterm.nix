@@ -1,6 +1,8 @@
-{pkgs, ...}: let
-  vars = import ../../variables.nix;
-in {
+{
+  pkgs,
+  vars,
+  ...
+}: {
   programs.wezterm = {
     enable = true;
     package = pkgs.wezterm;

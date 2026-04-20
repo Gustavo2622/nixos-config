@@ -20,5 +20,5 @@
   # Kitty as system-level fallback terminal — Hyprland uses it as default.
   # User config is in home-manager (terminals/kitty.nix); this ensures
   # a working terminal even if home-manager fails to activate.
-  environment.systemPackages = with pkgs; [ kitty ];
+  environment.systemPackages = with pkgs; [kitty];
 }

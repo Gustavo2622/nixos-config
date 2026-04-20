@@ -1,8 +1,4 @@
-{host, ...}: let
-  inherit
-    (import ../../../hosts/${host}/variables.nix)
-    ;
-in {
+{...}: {
   wayland.windowManager.hyprland.settings = {
     # Name: END-4-slide  Modified to better support Hyprtrails
     # Credit: END-4 project https://github.com/end-4/dots-hyprland

@@ -1,9 +1,6 @@
 # nh Nix helper with /etc/nixos flake path, 7-day auto garbage collection
 # (keep 5 generations); installs nix-output-monitor and nvd.
-{
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   programs.nh = {
     enable = true;
     clean = {

@@ -1,6 +1,8 @@
-{config, ...}: let
-  vars = import ../variables.nix;
-in {
+{
+  config,
+  vars,
+  ...
+}: {
   services.swaync = {
     enable = true;
     settings = {

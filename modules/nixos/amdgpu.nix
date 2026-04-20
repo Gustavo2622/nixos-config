@@ -21,5 +21,4 @@
     opencl.enable = true; # Enable OpenCL support
     initrd.enable = true; # Enable driver in initrd to get nice res on boot
   };
-
 }

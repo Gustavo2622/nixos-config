@@ -1,9 +1,9 @@
 {
   pkgs,
   config,
+  vars,
   ...
 }: let
-  vars = import ../../variables.nix;
   ghostHome = "${config.xdg.configHome}/ghostty";
   shaderFile = "${ghostHome}/shaders/shader.glsl";
 in {
@@ -45,7 +45,7 @@ in {
       custom-shader-animation = "always"; # Disable this if changing to a more complex animation
       term = "xterm-256color";
       confirm-close-surface = false;
-      font-family = [ vars.fontName vars.fallbackFont ];
+      font-family = [vars.fontName vars.fallbackFont];
       font-size = vars.termFontSize;
       theme = "dark:catppuccin-mocha,light:catppuccin-mocha";
       adjust-cell-height = "10%";
@@ -74,7 +74,7 @@ in {
         "ctrl+shift+c=copy_to_clipboard"
         "ctrl+shift+v=paste_from_clipboard"
 
-        # Font Size Control 
+        # Font Size Control
         "ctrl+shift+plus=increase_font_size:1"
         "ctrl+shift+minus=decrease_font_size:1"
         "ctrl+shift+zero=reset_font_size"
@@ -102,7 +102,7 @@ in {
         "alt+s>8=goto_tab:8"
         "alt+s>9=goto_tab:9"
 
-        # Split 
+        # Split
         "alt+s>\\=new_split:right"
         "alt+s>-=new_split:down"
 

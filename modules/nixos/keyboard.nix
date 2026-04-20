@@ -4,9 +4,8 @@
   pkgs,
   inputs,
   ...
-}@args:
-{
-  services.xserver.xkb ={
+} @ args: {
+  services.xserver.xkb = {
     layout = "us";
     variant = "";
     options = "ctrl:swapcaps";

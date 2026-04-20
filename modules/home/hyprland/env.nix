@@ -1,6 +1,4 @@
-_: let
-  vars = import ../../variables.nix;
-in {
+{vars, ...}: {
   wayland.windowManager.hyprland = {
     settings = {
       env = [
