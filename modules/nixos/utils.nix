@@ -14,5 +14,6 @@
     difftastic
     mergiraf
     ripgrep
+    claude-code
   ];
 }
