@@ -106,6 +106,14 @@
     );
     formatter = forAllSystems (system: alejandra.packages.${system}.default);
 
+    devShells = forAllSystems (system: let
+      p = pkgs system;
+    in {
+      default = p.mkShell {
+        packages = [p.alejandra p.nil p.statix p.deadnix p.nix-diff];
+      };
+    });
+
     nixosConfigurations = let
       system = "x86_64-linux";
       inherit (neovimModule system) neovim;
