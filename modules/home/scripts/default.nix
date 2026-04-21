@@ -23,6 +23,7 @@
       inherit pkgs;
       inherit username;
     })
+    (import ./clip.nix {inherit pkgs;})
     (import ./web-search.nix {inherit pkgs;})
     # Cheatsheets viewer + parser
     (import ./cheatsheets-parser.nix {inherit pkgs;})

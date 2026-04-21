@@ -15,6 +15,7 @@
     ./editor.nix
     ./flatpak.nix
     ./fonts.nix
+    ./forgejo.nix
     # Include the results of the hardware scan.
     # ./greetd.nix
     ./hardware-configuration.nix
