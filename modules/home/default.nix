@@ -51,6 +51,7 @@
       ./zen-browser.nix
       ./zoxide.nix
       ./zsh
+      ../mutable
     ]
     ++ lib.optional (vars.barChoice == "noctalia") ./noctalia.nix
     ++ lib.optional (vars.barChoice == "waybar") ./waybar;

@@ -1,11 +1,28 @@
-{vars, ...}: {
+{
+  vars,
+  config,
+  ...
+}: let
+  homeDir = config.home.homeDirectory;
+in {
   programs.waybar = {
     enable = true;
-    style =
-      builtins.replaceStrings
-      ["__UI_FONT__" "__UI_FONT_SIZE__"]
-      [vars.uiFontName (toString vars.uiFontSize)]
-      (builtins.readFile ./style.css);
+    style = let
+      baseStyle =
+        builtins.replaceStrings
+        ["__UI_FONT__" "__UI_FONT_SIZE__"]
+        [vars.uiFontName (toString vars.uiFontSize)]
+        (builtins.readFile ./style.css);
+      mutableDir = "${homeDir}/.local/state/mutable/waybar";
+    in
+      baseStyle
+      + ''
+
+        /* Mutable fragment overrides (nxc mut) — CSS cascade, later rules win */
+        @import url("${mutableDir}/00-theme.css");
+        @import url("${mutableDir}/50-user.css");
+        @import url("${mutableDir}/90-debug.css");
+      '';
     settings = [
       {
         layer = "top";

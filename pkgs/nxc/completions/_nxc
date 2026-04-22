@@ -1,0 +1,123 @@
+#compdef nxc
+
+_nxc() {
+  local -a commands
+  commands=(
+    'info:System summary (ports, packages, services)'
+    'mut:Mutable state management'
+    'theme:Theme hot-swap'
+    'health:Config hygiene check'
+    'help:Show usage'
+  )
+
+  local -a mut_commands
+  mut_commands=(
+    'status:Overview of all mutable state'
+    'show:Display mutable fragment contents'
+    'edit:Edit mutable fragments'
+    'reset:Wipe all mutable state for a program'
+    'sync:Bidirectional sync disk and state/'
+    'help:Show usage'
+  )
+
+  local -a theme_commands
+  theme_commands=(
+    'list:List available themes'
+    'current:Show active runtime theme'
+    'set:Apply a theme (hot-swap)'
+    'lock:Make runtime theme the declarative default'
+    'reset:Restore Nix-declared theme colors'
+    'help:Show usage'
+  )
+
+  local -a info_flags
+  info_flags=(
+    '--json:Raw JSON output'
+    '--cached:Read cached result (no nix eval)'
+    '--packages:List system packages'
+    '--services:List services'
+    '--search:Search packages by name'
+  )
+
+  local -a health_flags
+  health_flags=(
+    '--verbose:Show full linter output'
+    '--strict:Treat warnings as errors'
+  )
+
+  _nxc_programs() {
+    local registry="$HOME/.local/state/nxc/registry.json"
+    if [[ -f "$registry" ]]; then
+      local -a progs
+      progs=(${(f)"$(jq -r 'keys[]' "$registry" 2>/dev/null)"})
+      _describe 'program' progs
+    fi
+  }
+
+  _nxc_fragments() {
+    local prog="$1"
+    local registry="$HOME/.local/state/nxc/registry.json"
+    if [[ -f "$registry" ]]; then
+      local dir ext
+      dir=$(jq -r --arg p "$prog" '.[$p].mutableDir // empty' "$registry" 2>/dev/null)
+      ext=$(jq -r --arg p "$prog" '.[$p].fileExtension // empty' "$registry" 2>/dev/null)
+      if [[ -d "$dir" ]]; then
+        local -a frags
+        frags=(${(f)"$(find "$dir" -name "*.$ext" -type f 2>/dev/null | sed "s|$dir/||" | sort)"})
+        _describe 'fragment' frags
+      fi
+    fi
+  }
+
+  if (( CURRENT == 2 )); then
+    _describe 'command' commands
+    return
+  fi
+
+  case "${words[2]}" in
+    info)
+      _describe 'flag' info_flags
+      ;;
+    mut)
+      if (( CURRENT == 3 )); then
+        _describe 'subcommand' mut_commands
+      elif (( CURRENT == 4 )); then
+        case "${words[3]}" in
+          edit|show|reset)
+            _nxc_programs
+            ;;
+          status)
+            _values 'flag' '--json'
+            ;;
+        esac
+      elif (( CURRENT == 5 )); then
+        case "${words[3]}" in
+          edit)
+            _nxc_fragments "${words[4]}"
+            ;;
+        esac
+      fi
+      ;;
+    theme)
+      if (( CURRENT == 3 )); then
+        _describe 'subcommand' theme_commands
+      elif (( CURRENT == 4 )); then
+        case "${words[3]}" in
+          set)
+            local themes_file="$HOME/.local/state/nxc/themes.json"
+            if [[ -f "$themes_file" ]]; then
+              local -a themes
+              themes=(${(f)"$(jq -r 'keys[]' "$themes_file" 2>/dev/null)"})
+              _describe 'theme' themes
+            fi
+            ;;
+        esac
+      fi
+      ;;
+    health)
+      _describe 'flag' health_flags
+      ;;
+  esac
+}
+
+_nxc "$@"

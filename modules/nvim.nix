@@ -241,5 +241,20 @@ in {
         require("snippets.init")           -- load all tex snippets once
         require("latex-setup")             -- register FileType autocmd for tex buffers
       '';
+
+    # Mutable fragment overrides (nxc mut) — load all .lua files from the mutable dir
+    luaConfigRC.nxcMutable =
+      dag.entryAfter ["hotswapLua" "flakeLua" "formatExplicitOnly" "diff3Way" "latexSetup"]
+      # lua
+      ''
+        local mutable_dir = vim.fn.expand("~/.local/state/mutable/nvim")
+        if vim.fn.isdirectory(mutable_dir) == 1 then
+          local files = vim.fn.glob(mutable_dir .. "/*.lua", false, true)
+          table.sort(files)
+          for _, f in ipairs(files) do
+            dofile(f)
+          end
+        end
+      '';
   };
 }

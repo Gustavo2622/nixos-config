@@ -200,6 +200,9 @@ in {
       # To enable blur on waybar uncomment the line below
       # Thanks to SchotjeChrisman
       #layerrule = blur,waybar
+
+      # Mutable fragment overrides (nxc mut)
+      source = ~/.local/state/mutable/hyprland/*.conf
     ";
   };
 }

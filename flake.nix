@@ -97,6 +97,12 @@
           inherit inputs flakePath nvf;
         };
       };
+    nxc = system:
+      (pkgs system).callPackage ./pkgs/nxc {
+        hostName = vars.host;
+        flakeRoot = "/etc/nixos";
+        themeName = vars.theme;
+      };
   in {
     inherit overlays;
     packages = forAllSystems (
@@ -110,17 +116,28 @@
       p = pkgs system;
     in {
       default = p.mkShell {
-        packages = [p.alejandra p.nil p.statix p.deadnix p.nix-diff];
+        packages = [p.alejandra p.nil p.statix p.deadnix p.nix-diff p.ssh-to-age (nxc system)];
+        shellHook = ''
+          export SOPS_AGE_KEY=$(ssh-to-age -i ~/.ssh/id_ed25519 -private-key 2>/dev/null || echo "")
+        '';
       };
     });
+
+    configData = {
+      "gustavo-Desktop" = import ./pkgs/nxc/queries {
+        inherit (nixpkgs) lib;
+        config = self.nixosConfigurations.gustavo-Desktop.config;
+      };
+    };
 
     nixosConfigurations = let
       system = "x86_64-linux";
       inherit (neovimModule system) neovim;
+      nxcPkg = nxc system;
     in {
       gustavo-Desktop = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = {inherit inputs outputs neovim home-manager hmConfig vars theme;};
+        specialArgs = {inherit inputs outputs neovim home-manager hmConfig vars theme nxcPkg;};
         modules = [
           {
             nixpkgs.overlays = [overlay-set];

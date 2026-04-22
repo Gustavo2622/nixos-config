@@ -41,6 +41,12 @@ in {
     enableBashIntegration = true;
     clearDefaultKeybinds = true;
     settings = {
+      # Mutable fragment overrides (nxc mut) — optional, won't error if missing
+      config-file = [
+        "?~/.local/state/mutable/ghostty/00-theme.conf"
+        "?~/.local/state/mutable/ghostty/50-user.conf"
+        "?~/.local/state/mutable/ghostty/90-debug.conf"
+      ];
       custom-shader = shaderFile;
       custom-shader-animation = "always"; # Disable this if changing to a more complex animation
       term = "xterm-256color";

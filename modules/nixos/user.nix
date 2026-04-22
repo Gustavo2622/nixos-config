@@ -7,6 +7,7 @@
   hmConfig,
   vars,
   theme,
+  nxcPkg,
   ...
 }: let
   inherit (vars) username gitUsername;
@@ -18,7 +19,7 @@ in {
     home-manager = {
       useUserPackages = true;
       useGlobalPkgs = false;
-      extraSpecialArgs = {inherit inputs username outputs vars theme;};
+      extraSpecialArgs = {inherit inputs username outputs vars theme nxcPkg;};
       backupFileExtension = "bck";
       users.${username} = {
         home = {
