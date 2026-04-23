@@ -50,7 +50,7 @@
       fileExtension = "conf";
       inclusionMethod = "config-file-dir";
       precedence = "last-wins";
-      reloadCmd = null;
+      reloadCmd = "pkill -USR2 ghostty";
       declaredConfigPath = null;
       commentStart = "#";
       commentEnd = "";
