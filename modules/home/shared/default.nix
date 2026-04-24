@@ -2,6 +2,7 @@
 _: {
   imports = [
     ./amfora.nix
+    ./atuin.nix
     ./bash.nix
     ./bashrc-personal.nix
     ./cli
@@ -14,6 +15,7 @@ _: {
     ./obsidian.nix
     ./python.nix
     ./scripts
+    ./ssh.nix
     ./starship.nix
     ./tealdeer.nix
     ./terminals

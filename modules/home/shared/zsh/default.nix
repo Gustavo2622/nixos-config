@@ -8,6 +8,8 @@
     ./zshrc-personal.nix
   ];
 
+  home.packages = [pkgs.atool];
+
   programs.zsh = {
     enable = true;
     autosuggestion.enable = true;
@@ -23,23 +25,6 @@
       size = 10000;
     };
 
-    oh-my-zsh = {
-      enable = true;
-    };
-
-    plugins = [
-      {
-        name = "powerlevel10k";
-        src = pkgs.zsh-powerlevel10k;
-        file = "share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
-      }
-      {
-        name = "powerlevel10k-config";
-        src = lib.cleanSource ./p10k-config;
-        file = "p10k.zsh";
-      }
-    ];
-
     dotDir = "${config.xdg.configHome}/zsh";
 
     initContent = ''
@@ -50,25 +35,41 @@
       if [ -f $HOME/.zshrc-personal ]; then
         source $HOME/.zshrc-personal
       fi
+
+      # Double-ESC to prepend/remove sudo
+      function _sudo_command_line() {
+        [[ -z $BUFFER ]] && zle up-history
+        if [[ $BUFFER == sudo\ * ]]; then
+          LBUFFER="''${LBUFFER#sudo }"
+        else
+          LBUFFER="sudo $LBUFFER"
+        fi
+      }
+      zle -N _sudo_command_line
+      bindkey '\e\e' _sudo_command_line
     '';
 
-    shellAliases = {
-      nix-fmt-all = "nix fmt ./";
-      sv = "sudo nvim";
-      v = "nvim";
-      c = "clear";
-      fr = "nh os switch";
-      fu = "nh os switch --update";
-      ncg = "nix-collect-garbage --delete-old && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot";
-      cat = "bat";
-      man = "batman";
-      diff = "difftastic";
+    shellAliases =
+      {
+        nix-fmt-all = "nix fmt ./";
+        sv = "sudo nvim";
+        v = "nvim";
+        c = "clear";
+        cat = "bat";
+        man = "batman";
+        diff = "difftastic";
 
-      # Url Encode/Decode
-      urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
-      urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
-
-      # TODO: Other encodings, e.g. base64
-    };
+        # Url Encode/Decode
+        urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
+        urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
+      }
+      // lib.optionalAttrs pkgs.stdenv.isLinux {
+        fr = "nh os switch";
+        fu = "nh os switch --update";
+        ncg = "nix-collect-garbage --delete-old && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot";
+      }
+      // lib.optionalAttrs pkgs.stdenv.isDarwin {
+        dr = "darwin-rebuild switch --flake ~/nix-config";
+      };
   };
 }

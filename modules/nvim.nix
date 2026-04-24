@@ -6,6 +6,10 @@
   ...
 }: let
   inherit (nvf.lib.nvim) dag;
+  vimtexViewer =
+    if pkgs.stdenv.isDarwin
+    then "skim"
+    else "zathura";
 in {
   # Actual nvim config options, separate to avoid mega indentation
   config.vim = {
@@ -33,7 +37,7 @@ in {
       vimtex = {
         package = pkgs.vimPlugins.vimtex;
         setup = ''
-          vim.g.vimtex_view_method = 'zathura'
+          vim.g.vimtex_view_method = '${vimtexViewer}'
           vim.g.tex_flavour = 'latex'
           vim.g.vimtex_quickfix_mode = 0
           vim.g.tex_conceal = 'abdmg'

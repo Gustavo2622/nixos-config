@@ -1,11 +1,11 @@
 {
-  config,
   lib,
+  theme,
   ...
 }: let
-  accent = "#" + config.lib.stylix.colors.base0D;
-  foreground = "#" + config.lib.stylix.colors.base05;
-  muted = "#" + config.lib.stylix.colors.base03;
+  accent = "#" + theme.base0D;
+  foreground = "#" + theme.base05;
+  muted = "#" + theme.base03;
 in {
   programs.fzf = {
     enable = true;

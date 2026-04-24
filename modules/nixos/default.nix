@@ -9,6 +9,7 @@
   imports = [
     # Include graphics card configuration
     ./amdgpu.nix
+    ./atuin.nix
     ./audio.nix
     ./boot.nix
     ./cachix.nix
