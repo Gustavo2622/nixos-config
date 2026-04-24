@@ -40,6 +40,7 @@
     ./nh.nix
     ./nix.nix
     ./printing.nix
+    ./rtc-wake.nix
     ./quickshell.nix
     ./security.nix
     ./services.nix

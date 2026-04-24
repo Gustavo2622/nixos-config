@@ -1,18 +1,15 @@
-# Aggregates all custom scripts and QuickShell GUI tools into home.packages.
+# Linux-only scripts (Hyprland/Wayland/QuickShell)
 {
   config,
   pkgs,
   username,
-  profile,
   ...
 }: {
   home.packages = [
     (import ./emopicker9000.nix {inherit pkgs;})
-    (import ./hm-find.nix {inherit pkgs;})
     (import ./keybinds.nix {inherit pkgs;})
     (import ./keybind-cheatsheet.nix {inherit pkgs;})
     (import ./qs-keybinds.nix {inherit pkgs;})
-    (import ./note.nix {inherit pkgs;})
     (import ./note-from-clipboard.nix {inherit pkgs;})
     (import ./nvidia-offload.nix {inherit pkgs;})
     (import ./rofi-launcher.nix {inherit pkgs;})
@@ -23,12 +20,8 @@
       inherit pkgs;
       inherit username;
     })
-    (import ./clip.nix {inherit pkgs;})
-    (import ./web-search.nix {inherit pkgs;})
-    # Cheatsheets viewer + parser
-    (import ./cheatsheets-parser.nix {inherit pkgs;})
+    # Cheatsheets viewer (QuickShell)
     (import ./qs-cheatsheets.nix {inherit config pkgs;})
-    (import ./docs-parser.nix {inherit pkgs;})
     # QuickShell scripts
     (import ./qs-vid-wallpapers.nix {inherit pkgs;})
     (import ./qs-vid-wallpapers-apply.nix {inherit pkgs;})

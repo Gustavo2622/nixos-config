@@ -1,58 +1,8 @@
-{
-  config,
-  inputs,
-  lib,
-  osConfig,
-  outputs,
-  pkgs,
-  self,
-  vars,
-  ...
-}: {
-  imports =
-    [
-      ./amfora.nix
-      ./anki.nix
-      ./bash.nix
-      ./bashrc-personal.nix
-      ./bitwarden.nix
-      ./browsers.nix
-      ./cli
-      ./desktop-monitor-cfg.nix
-      ./editors
-      ./emoji.nix
-      ./eza.nix
-      ./gtk.nix
-      ./hyprland
-      ./latex.nix
-      ./monitors.nix
-      ./multimedia.nix
-      ./musescore.nix
-      ./newsboat.nix
-      ./obsidian.nix
-      ./obs-studio.nix
-      ./productivity.nix
-      ./python.nix
-      ./qt.nix
-      ./rofi
-      ./scripts
-      ./starship.nix
-      ./stylix.nix
-      ./swappy.nix
-      ./swaync.nix
-      ./tealdeer.nix
-      ./fonts.nix
-      ./terminals
-      ./user.nix
-      ./virtmanager.nix
-      ./wlogout
-      ./xdg.nix
-      ./yazi
-      ./zen-browser.nix
-      ./zoxide.nix
-      ./zsh
-      ../mutable
-    ]
-    ++ lib.optional (vars.barChoice == "noctalia") ./noctalia.nix
-    ++ lib.optional (vars.barChoice == "waybar") ./waybar;
+# Home-manager entry point — linux host (imports shared + linux modules)
+# Darwin entry point will import ../home/darwin instead.
+{...}: {
+  imports = [
+    ./linux
+    ../mutable
+  ];
 }
