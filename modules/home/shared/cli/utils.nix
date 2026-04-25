@@ -27,6 +27,10 @@
     gnutar # Archive tool
     tree # Directory tree viewer
 
+    # Encryption / secrets
+    age # Modern encryption tool (used by sops-nix)
+    age-plugin-yubikey # YubiKey support for age
+
     # Networking
     aria2 # Multi-protocol download accelerator
     dnsutils # dig + nslookup

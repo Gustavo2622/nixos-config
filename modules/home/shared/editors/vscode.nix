@@ -10,6 +10,7 @@
   hyprlsVer = "0.1.2"; # ewen-lbh.vscode-hyprls
   neroHyprlandVer = "0.0.2"; # amarcos1337.nero-hyprland
   codeRunnerVer = "0.12.4"; # formulahendry.code-runner
+  claudeVer = "0.2.0"; # anthropic.claude-code (marketplace only)
 
   # Helper: prefer Open VSX (pkgs.vscode-extensions). If missing and a version is
   # provided, fetch from the VSCode Marketplace using extensionsFromVscodeMarketplace.
@@ -60,6 +61,11 @@
     version = codeRunnerVer;
     sha256 = pkgs.lib.fakeSha256;
   };
+  claudeExts = extOrMarketplace {
+    publisher = "anthropic";
+    name = "claude-code";
+    version = claudeVer;
+  };
 in {
   programs.vscode = {
     enable = true;
@@ -81,7 +87,8 @@ in {
           ++ hyprlangExts
           ++ hyprlsExts
           ++ neroHyprlandExts
-          ++ codeRunnerExts;
+          ++ codeRunnerExts
+          ++ claudeExts;
         userSettings = lib.mkForce {
           "workbench.colorTheme" = "Nero Hyprland";
           "workbench.iconTheme" = "catppuccin-mocha";
