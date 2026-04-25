@@ -14,7 +14,7 @@
     # package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
     # set the portal also, to remain in sync
     # portalPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
-    withUWSM = false;
+    withUWSM = true;
     xwayland.enable = true;
   };
   # Kitty as system-level fallback terminal — Hyprland uses it as default.

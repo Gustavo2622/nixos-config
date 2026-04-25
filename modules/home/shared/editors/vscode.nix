@@ -89,12 +89,8 @@ in {
           ++ neroHyprlandExts
           ++ codeRunnerExts
           ++ claudeExts;
-        userSettings = lib.mkForce {
-          "workbench.colorTheme" = "Nero Hyprland";
-          "workbench.iconTheme" = "catppuccin-mocha";
-        };
+        # userSettings managed at runtime — TODO: incorporate via nxc mut
       };
     };
   };
-  nixpkgs.config.allowUnfree = true;
 }

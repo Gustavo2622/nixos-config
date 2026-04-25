@@ -18,7 +18,7 @@ in {
   config = {
     home-manager = {
       useUserPackages = true;
-      useGlobalPkgs = false;
+      useGlobalPkgs = true;
       extraSpecialArgs = {inherit inputs username outputs vars theme nxcPkg;};
       backupFileExtension = "bck";
       users.${username} = {

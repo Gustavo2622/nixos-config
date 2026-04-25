@@ -7,4 +7,7 @@
     ./system-defaults.nix
     ./user.nix
   ];
+
+  system.primaryUser = vars.username;
+  system.stateVersion = 4;
 }

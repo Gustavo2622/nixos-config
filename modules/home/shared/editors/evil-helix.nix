@@ -1,12 +1,16 @@
-{pkgs, ...}: {
-  home.packages = with pkgs; [
-    evil-helix
-    cmake-language-server
-    # jsonnet-language-server
-    luaformatter
-    lua-language-server
-    marksman
-    taplo
+{
+  pkgs,
+  lib,
+  ...
+}: {
+  home.packages = with pkgs;
+    [
+      evil-helix
+      cmake-language-server
+      # jsonnet-language-server
+      luaformatter
+      lua-language-server
+      taplo
     nil
     # jq-lsp
     vscode-langservers-extracted
@@ -18,6 +22,9 @@
     docker-compose
     docker-language-server
     # typescript-language-server
+  ]
+  ++ lib.optionals pkgs.stdenv.isLinux [
+    marksman # dotnet-based, hangs on darwin
   ];
 
   home.file.".config/helix/config.toml".text = ''
@@ -37,7 +44,11 @@
     auto-info = true
     color-modes = true
     popup-border = "all"
-    clipboard-provider = "wayland"
+    clipboard-provider = "${
+      if pkgs.stdenv.isLinux
+      then "wayland"
+      else "default"
+    }"
     indent-heuristic = "hybrid"
 
     [editor.statusline]

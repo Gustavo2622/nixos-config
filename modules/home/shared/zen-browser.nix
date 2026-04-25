@@ -1,11 +1,15 @@
 {
   pkgs,
+  lib,
   inputs,
   ...
 }: let
-  # Prefer explicit package name if available; fall back to default
-  zenPkg = inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.zen-browser or inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  system = pkgs.stdenv.hostPlatform.system;
+  hasZen = inputs.zen-browser.packages ? ${system};
+  zenPkg =
+    if hasZen
+    then (inputs.zen-browser.packages.${system}.zen-browser or inputs.zen-browser.packages.${system}.default)
+    else null;
 in {
-  # Install Zen Browser for the user
-  home.packages = [zenPkg];
+  home.packages = lib.optional (zenPkg != null) zenPkg;
 }

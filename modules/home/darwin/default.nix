@@ -2,6 +2,7 @@
 _: {
   imports = [
     ../shared
+    ./aerospace.nix
     ./packages.nix
     ./secrets.nix
     ./user.nix

@@ -198,10 +198,11 @@
     linux_display_server auto
   '';
 
-  # Desktop entry for kitty-bg
-  home.file."${config.xdg.dataHome}/applications/kitty-bg.desktop".text = ''
-    [Desktop Entry]
-    Version=1.0
+  # Desktop entry for kitty-bg (Linux only)
+  home.file."${config.xdg.dataHome}/applications/kitty-bg.desktop" = lib.mkIf pkgs.stdenv.isLinux {
+    text = ''
+      [Desktop Entry]
+      Version=1.0
     Type=Application
     Name=Kitty with Background
     Comment=Terminal emulator with random background image
@@ -209,11 +210,12 @@
     Icon=utilities-terminal
     Terminal=false
     Categories=System;TerminalEmulator;Utility;
-    Keywords=terminal;shell;prompt;
-  '';
+      Keywords=terminal;shell;prompt;
+    '';
+  };
 
   # Wrapper to select a random wallpaper, update the symlink, and launch kitty with kitty-bg.conf
-  home.packages = [
+  home.packages = lib.optionals pkgs.stdenv.isLinux [
     (pkgs.writeShellScriptBin "kitty-bg" ''
             #!/usr/bin/env bash
             set -euo pipefail

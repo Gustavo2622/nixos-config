@@ -1,23 +1,15 @@
 # Multimedia packages: mpv for video playback, tauon and nuclear for music.
 {
-  config,
   pkgs,
-  inputs,
-  outputs,
   lib,
-  osConfig,
   ...
-}: rec {
-  imports = [];
-  options = {};
-  config = {
-    home.packages = with pkgs; [
-      # Video player
+}: {
+  home.packages = with pkgs;
+    [
       mpv
-
-      # Music player
+    ]
+    ++ lib.optionals pkgs.stdenv.isLinux [
       tauon
       nuclear
     ];
-  };
 }

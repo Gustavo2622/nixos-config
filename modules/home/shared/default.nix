@@ -11,7 +11,7 @@ _: {
     ./eza.nix
     ./fonts.nix
     ./multimedia.nix
-    ./newsboat.nix
+    # ./newsboat.nix  # removed — RSS client choice deferred to Phase 10
     ./obsidian.nix
     ./python.nix
     ./scripts

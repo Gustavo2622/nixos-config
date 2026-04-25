@@ -4,9 +4,10 @@ _: {
     enable = true;
     onActivation = {
       autoUpdate = true;
-      cleanup = "zap"; # Remove unmanaged casks/brews
+      cleanup = "none"; # TODO: re-enable "zap" after clean build
       upgrade = true;
     };
+
 
     taps = [
       "nikitabobko/tap" # aerospace
@@ -18,9 +19,10 @@ _: {
 
       # Communication
       "slack"
-      "zoom"
+      # "zoom"  # cask definition broken upstream — install manually: brew install --cask zoom
 
       # Browsers
+      "brave-browser"
       "google-chrome"
       "firefox"
 
@@ -31,17 +33,18 @@ _: {
       "bitwarden"
 
       # Sync / Networking
-      "syncthing"
-      "tailscale"
+      "syncthing-app"
+      "tailscale-app"
 
       # Media
       "vlc"
 
       # AI
-      "ollama"
+      "ollama-app"
 
       # Dev
       "colima" # Docker runtime (lightweight, no Docker Desktop)
+      "vscodium"
 
       # Window management
       "nikitabobko/tap/aerospace"

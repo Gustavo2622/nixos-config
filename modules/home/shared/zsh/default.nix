@@ -62,6 +62,11 @@
         # Url Encode/Decode
         urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
         urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
+
+        # Nix with pretty output (piped through nom for tree view)
+        nb = "nix build |& nom";
+        nd = "nix develop |& nom";
+        ns = "nix shell |& nom";
       }
       // lib.optionalAttrs pkgs.stdenv.isLinux {
         fr = "nh os switch";
@@ -69,7 +74,7 @@
         ncg = "nix-collect-garbage --delete-old && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot";
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
-        dr = "darwin-rebuild switch --flake ~/nix-config";
+        dr = "sudo darwin-rebuild switch --flake ~/nixos-config |& nom";
       };
   };
 }

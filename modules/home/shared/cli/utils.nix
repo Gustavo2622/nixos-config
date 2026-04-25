@@ -40,5 +40,6 @@
 
     # Monitoring (cross-platform)
     lsof # List open files and sockets
+    nix-output-monitor # Pretty nix build output (nom)
   ];
 }
