@@ -221,7 +221,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               backupFileExtension = "bck";
-              extraSpecialArgs = {inherit inputs outputs vars theme nxcPkg;};
+              extraSpecialArgs = {inherit inputs outputs vars theme neovim nxcPkg;};
               users.${username} = {
                 imports = [
                   ./modules/home/darwin

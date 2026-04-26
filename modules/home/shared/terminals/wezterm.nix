@@ -6,6 +6,8 @@
   programs.wezterm = {
     enable = true;
     package = pkgs.wezterm;
+    enableZshIntegration = false; # conditional in zsh/default.nix
+    enableBashIntegration = false;
   };
   home.file."./.config/wezterm/wezterm.lua".text = ''
     -- Config from Drew @justaguylinux small mods

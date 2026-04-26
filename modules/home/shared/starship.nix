@@ -8,7 +8,7 @@
   background-alt = "#${theme.base01}";
 in {
   programs.starship = {
-    enable = true;
+    enable = false; # disabled in favor of p10k for instant prompt
     settings = {
       add_newline = false;
       format = lib.concatStrings [

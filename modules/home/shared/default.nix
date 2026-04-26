@@ -16,7 +16,7 @@ _: {
     ./python.nix
     ./scripts
     ./ssh.nix
-    ./starship.nix
+    # ./starship.nix  # disabled in favor of p10k
     ./tealdeer.nix
     ./terminals
     ./zen-browser.nix

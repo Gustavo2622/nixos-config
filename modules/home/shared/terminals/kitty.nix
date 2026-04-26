@@ -32,9 +32,9 @@
     };
 
     shellIntegration = {
-      enableZshIntegration = true;
-      enableFishIntegration = true;
-      enableBashIntegration = true;
+      enableZshIntegration = false; # conditional in zsh/default.nix
+      enableFishIntegration = false;
+      enableBashIntegration = false;
       mode = "enabled";
     };
 

@@ -127,9 +127,9 @@ in {
   programs.ghostty = lib.mkIf isLinux {
     enable = true;
     package = pkgs.ghostty;
-    enableFishIntegration = true;
-    enableZshIntegration = true;
-    enableBashIntegration = true;
+    enableFishIntegration = false;
+    enableZshIntegration = false; # conditional in zsh/default.nix
+    enableBashIntegration = false;
     clearDefaultKeybinds = true;
     settings =
       sharedSettings
