@@ -19,7 +19,10 @@ in {
     treesitter = {
       enable = true;
       textobjects.enable = true;
-      context.enable = true;
+      context = {
+        enable = true;
+        setupOpts.max_lines = 5;
+      };
     };
 
     # LSP Support
@@ -150,9 +153,28 @@ in {
       files.enable = true;
       pick.enable = true;
       indentscope.enable = true;
-      clue.enable = true;
-      move.enable = true;
-      splitjoin.enable = true;
+      move = {
+        enable = true;
+        setupOpts = {
+          mappings = {
+            left = "<C-M-h>";
+            right = "<C-M-l>";
+            down = "<C-M-j>";
+            up = "<C-M-k>";
+            line_left = "<C-M-h>";
+            line_right = "<C-M-l>";
+            line_down = "<C-M-j>";
+            line_up = "<C-M-k>";
+          };
+          options = {
+            reindent_linewise = true;
+          };
+        };
+      };
+      splitjoin = {
+        enable = true;
+        setupOpts.mappings.toggle = "gS";
+      };
       visits.enable = true;
     };
 
@@ -195,6 +217,76 @@ in {
           severity_sort = true,
           float = { border = "rounded", source = true },
         })
+
+        -- ── Shared mini.pick matcher: case-insensitive fuzzy with toggles ──
+        -- Prefix ' for exact, ^ for case-sensitive, combine in any order
+        _G.nxc_pick_match = function(stritems, indices, query)
+          local exact = false
+          local case_sensitive = false
+          local q = query
+
+          -- Parse prefix toggles (order-insensitive)
+          while true do
+            if q:sub(1, 1) == "'" then exact = true; q = q:sub(2)
+            elseif q:sub(1, 1) == "^" then case_sensitive = true; q = q:sub(2)
+            else break end
+          end
+
+          if q == "" then return indices end
+
+          local q_lower = case_sensitive and q or q:lower()
+          local result = {}
+
+          for _, idx in ipairs(indices) do
+            local item = stritems[idx]
+            local s = case_sensitive and item or item:lower()
+            local score = 0
+
+            if exact then
+              if s:find(q_lower, 1, true) then
+                -- Bonus for exact case match
+                if item:find(q, 1, true) then score = 100 else score = 50 end
+                table.insert(result, { idx = idx, score = score })
+              end
+            else
+              -- Fuzzy match
+              local si = 1
+              local matched = 0
+              local consecutive = 0
+              local max_consecutive = 0
+              for ci = 1, #q_lower do
+                local c = q_lower:sub(ci, ci)
+                local found = false
+                for j = si, #s do
+                  if s:sub(j, j) == c then
+                    si = j + 1
+                    matched = matched + 1
+                    consecutive = consecutive + 1
+                    if consecutive > max_consecutive then max_consecutive = consecutive end
+                    found = true
+                    break
+                  else
+                    consecutive = 0
+                  end
+                end
+                if not found then matched = 0; break end
+              end
+              if matched == #q_lower then
+                score = matched + max_consecutive * 10
+                -- Bonus for exact substring
+                if s:find(q_lower, 1, true) then score = score + 50 end
+                -- Bonus for exact case match
+                if item:find(q, 1, true) then score = score + 25 end
+                table.insert(result, { idx = idx, score = score })
+              end
+            end
+          end
+
+          table.sort(result, function(a, b) return a.score > b.score end)
+          local out = {}
+          for _, r in ipairs(result) do table.insert(out, r.idx) end
+          return out
+        end
       '';
 
     # ── Terminal escape ───────────────────────────────────────────────────
@@ -235,12 +327,74 @@ in {
         })
       '';
 
-    # ── Buffer / grep keymaps ────────────────────────────────────────────
+    # ── Navigation & leader keymaps ──────────────────────────────────────
     luaConfigRC.navigationKeymaps =
       dag.entryAfter ["coreSettings"]
       # lua
       ''
-        vim.keymap.set("n", "<leader>g", function() MiniPick.builtin.grep_live() end, {desc = "Live grep"})
+        -- All pickers use nxc_pick_match: case-insensitive fuzzy, ' for exact, ^ for case-sensitive
+        local nxc_source = function(opts)
+          opts.match = _G.nxc_pick_match
+          return MiniPick.start({ source = opts })
+        end
+
+        -- ── Pickers (mini.pick) ──
+        vim.keymap.set("n", "<leader>f", function() MiniPick.builtin.files({ source = { match = _G.nxc_pick_match }}) end, {desc = "Find files"})
+        vim.keymap.set("n", "<leader>g", function() MiniPick.builtin.grep_live({ source = { match = _G.nxc_pick_match }}) end, {desc = "Live grep"})
+        vim.keymap.set("n", "<leader>b", function() MiniPick.builtin.buffers({ source = { match = _G.nxc_pick_match }}) end, {desc = "Buffers"})
+        vim.keymap.set("n", "<leader>/", function() MiniPick.builtin.grep({pattern = vim.fn.expand("<cword>"), source = { match = _G.nxc_pick_match }}) end, {desc = "Grep word under cursor"})
+        vim.keymap.set("n", "<leader>h", function() MiniPick.builtin.help({ source = { match = _G.nxc_pick_match }}) end, {desc = "Help tags"})
+
+        -- ── Frecent files (mini.visits) ──
+        vim.keymap.set("n", "<leader>v", function() MiniVisits.select_path() end, {desc = "Recent files"})
+
+        -- ── Zoxide picker ──
+        vim.keymap.set("n", "<leader>z", function()
+          local items = vim.fn.systemlist("zoxide query -l")
+          nxc_source({ items = items, name = "Zoxide" })
+        end, {desc = "Zoxide dirs"})
+
+        -- ── Keymap explorer (custom mini.pick, searches keybind + description) ──
+        vim.keymap.set("n", "<leader>?", function()
+          local keymaps = {}
+          for _, map in ipairs(vim.api.nvim_get_keymap("n")) do
+            if map.desc and map.desc ~= "" then
+              table.insert(keymaps, string.format("%-20s  %s", map.lhs, map.desc))
+            end
+          end
+          -- Also include buffer-local keymaps
+          for _, map in ipairs(vim.api.nvim_buf_get_keymap(0, "n")) do
+            if map.desc and map.desc ~= "" then
+              table.insert(keymaps, string.format("%-20s  %s (buf)", map.lhs, map.desc))
+            end
+          end
+          table.sort(keymaps)
+          MiniPick.start({
+            source = {
+              items = keymaps,
+              name = "Keymaps",
+              match = _G.nxc_pick_match,
+              choose = function(item)
+                local lhs = vim.trim(item:match("^(%S+)"))
+                vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(lhs, true, false, true), "m", false)
+              end,
+            },
+          })
+        end, {desc = "Keymap explorer"})
+
+        -- ── Undotree ──
+        vim.keymap.set("n", "<leader>u", ":UndotreeToggle<CR>", {silent = true, desc = "Undo tree"})
+
+        -- ── Treesitter incremental selection ──
+        vim.keymap.set("n", "<C-space>", function()
+          require("nvim-treesitter.incremental_selection").init_selection()
+        end, {desc = "Init treesitter selection"})
+        vim.keymap.set("v", "<C-space>", function()
+          require("nvim-treesitter.incremental_selection").node_incremental()
+        end, {desc = "Expand selection"})
+        vim.keymap.set("v", "<C-S-space>", function()
+          require("nvim-treesitter.incremental_selection").node_decremental()
+        end, {desc = "Shrink selection"})
       '';
 
     # Disable format-on-save globally; use <leader>lf for explicit formatting only.

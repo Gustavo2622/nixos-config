@@ -63,6 +63,15 @@ _: {
           DSDontWriteNetworkStores = true;
           DSDontWriteUSBStores = true;
         };
+        # Disable Ctrl+Space input source switching (conflicts with nvim C-space)
+        "com.apple.symbolichotkeys" = {
+          AppleSymbolicHotKeys = {
+            # 60 = "Select the previous input source" (Ctrl+Space)
+            "60" = {enabled = false;};
+            # 61 = "Select next source in input menu" (Ctrl+Alt+Space)
+            "61" = {enabled = false;};
+          };
+        };
       };
 
       WindowManager = {
