@@ -111,7 +111,8 @@
         ncg = "nix-collect-garbage --delete-old && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot";
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
-        dr = "sudo darwin-rebuild switch --flake ~/nixos-config |& nom";
+        dr = "sudo darwin-rebuild switch --flake ~/nixos-config#gdel-macbook |& nom";
+        drp = "git -C ~/nixos-config pull && sudo darwin-rebuild switch --flake ~/nixos-config#gdel-macbook |& nom";
       };
   };
 }

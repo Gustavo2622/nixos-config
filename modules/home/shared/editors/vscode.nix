@@ -10,7 +10,8 @@
   hyprlsVer = "0.1.2"; # ewen-lbh.vscode-hyprls
   neroHyprlandVer = "0.0.2"; # amarcos1337.nero-hyprland
   codeRunnerVer = "0.12.4"; # formulahendry.code-runner
-  claudeVer = "0.2.0"; # anthropic.claude-code (marketplace only)
+  # Claude Code extension: managed at runtime via VSCode marketplace
+  # (version changes too frequently for pinned hashes)
 
   # Helper: prefer Open VSX (pkgs.vscode-extensions). If missing and a version is
   # provided, fetch from the VSCode Marketplace using extensionsFromVscodeMarketplace.
@@ -61,11 +62,6 @@
     version = codeRunnerVer;
     sha256 = pkgs.lib.fakeSha256;
   };
-  claudeExts = extOrMarketplace {
-    publisher = "anthropic";
-    name = "claude-code";
-    version = claudeVer;
-  };
 in {
   programs.vscode = {
     enable = true;
@@ -87,8 +83,7 @@ in {
           ++ hyprlangExts
           ++ hyprlsExts
           ++ neroHyprlandExts
-          ++ codeRunnerExts
-          ++ claudeExts;
+          ++ codeRunnerExts;
         # userSettings managed at runtime — TODO: incorporate via nxc mut
       };
     };

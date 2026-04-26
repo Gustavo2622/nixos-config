@@ -1,6 +1,10 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  lib,
+  ...
+}: {
   programs.zathura = {
-    enable = true;
+    enable = pkgs.stdenv.isLinux;
     options = {
       selection-clipboard = "clipboard";
       recolor = true;

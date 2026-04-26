@@ -1,4 +1,10 @@
-{config, ...}: {
+{
+  config,
+  pkgs,
+  ...
+}: let
+  isLinux = pkgs.stdenv.isLinux;
+in {
   programs.htop = {
     enable = true;
     settings =
@@ -29,14 +35,12 @@
           (bar "AllCPUs2")
           (bar "Memory")
           (bar "Swap")
-          (text "Zram")
         ])
       // (with config.lib.htop;
         rightMeters [
           (text "Tasks")
           (text "LoadAverage")
           (text "Uptime")
-          (text "Systemd")
         ]);
   };
 }

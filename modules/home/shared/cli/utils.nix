@@ -1,5 +1,9 @@
 # Cross-platform CLI utilities
-{pkgs, ...}: {
+{
+  pkgs,
+  lib,
+  ...
+}: {
   home.packages = with pkgs; [
     moreutils # Vipe
     fd # Fast find; used by fzf Alt+E widget and Ctrl+T
@@ -12,7 +16,6 @@
 
     # CLI utils
     alejandra # Nix code formatter (also available via nix fmt)
-    clipboard-jh # Clipboard manager with history, piping, and multi-clipboard
     comma # Run any nixpkgs program without installing: , cowsay hello
     nix-index # Locate which package provides a binary: nix-locate bin/pandoc
     glow # Terminal Markdown renderer
@@ -41,5 +44,8 @@
     # Monitoring (cross-platform)
     lsof # List open files and sockets
     nix-output-monitor # Pretty nix build output (nom)
+  ]
+  ++ lib.optionals pkgs.stdenv.isLinux [
+    clipboard-jh # Clipboard manager (X11/Wayland backends, Linux-only)
   ];
 }

@@ -188,6 +188,7 @@ in {
         enable = true;
         mappings.jump = "<CR>";
         mappings.remote = "<leader>r";
+        setupOpts.modes.char.enabled = false; # don't override f/t
       };
       undotree.enable = true;
     };
@@ -206,8 +207,16 @@ in {
       ''
         vim.g.mapleader = " "
         vim.opt.undofile = true
+        vim.opt.shiftwidth = 2
+        vim.opt.expandtab = true
         vim.o.foldlevel = 99
         vim.o.foldcolumn = '0'
+
+        -- Per-filetype shiftwidth overrides
+        vim.api.nvim_create_autocmd("FileType", {
+          pattern = { "rust", "python", "java" },
+          callback = function() vim.opt_local.shiftwidth = 4 end,
+        })
 
         vim.diagnostic.config({
           virtual_text = { spacing = 4, prefix = "●" },
@@ -218,75 +227,8 @@ in {
           float = { border = "rounded", source = true },
         })
 
-        -- ── Shared mini.pick matcher: case-insensitive fuzzy with toggles ──
-        -- Prefix ' for exact, ^ for case-sensitive, combine in any order
-        _G.nxc_pick_match = function(stritems, indices, query)
-          local exact = false
-          local case_sensitive = false
-          local q = query
-
-          -- Parse prefix toggles (order-insensitive)
-          while true do
-            if q:sub(1, 1) == "'" then exact = true; q = q:sub(2)
-            elseif q:sub(1, 1) == "^" then case_sensitive = true; q = q:sub(2)
-            else break end
-          end
-
-          if q == "" then return indices end
-
-          local q_lower = case_sensitive and q or q:lower()
-          local result = {}
-
-          for _, idx in ipairs(indices) do
-            local item = stritems[idx]
-            local s = case_sensitive and item or item:lower()
-            local score = 0
-
-            if exact then
-              if s:find(q_lower, 1, true) then
-                -- Bonus for exact case match
-                if item:find(q, 1, true) then score = 100 else score = 50 end
-                table.insert(result, { idx = idx, score = score })
-              end
-            else
-              -- Fuzzy match
-              local si = 1
-              local matched = 0
-              local consecutive = 0
-              local max_consecutive = 0
-              for ci = 1, #q_lower do
-                local c = q_lower:sub(ci, ci)
-                local found = false
-                for j = si, #s do
-                  if s:sub(j, j) == c then
-                    si = j + 1
-                    matched = matched + 1
-                    consecutive = consecutive + 1
-                    if consecutive > max_consecutive then max_consecutive = consecutive end
-                    found = true
-                    break
-                  else
-                    consecutive = 0
-                  end
-                end
-                if not found then matched = 0; break end
-              end
-              if matched == #q_lower then
-                score = matched + max_consecutive * 10
-                -- Bonus for exact substring
-                if s:find(q_lower, 1, true) then score = score + 50 end
-                -- Bonus for exact case match
-                if item:find(q, 1, true) then score = score + 25 end
-                table.insert(result, { idx = idx, score = score })
-              end
-            end
-          end
-
-          table.sort(result, function(a, b) return a.score > b.score end)
-          local out = {}
-          for _, r in ipairs(result) do table.insert(out, r.idx) end
-          return out
-        end
+        -- mini.pick's default match is already case-insensitive fuzzy.
+        -- No custom matcher needed — it works well out of the box.
       '';
 
     # ── Terminal escape ───────────────────────────────────────────────────
@@ -295,6 +237,19 @@ in {
       # lua
       ''
         vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", {silent = true, remap = true})
+      '';
+
+    # ── Disable flash in mini.pick buffers ──────────────────────────────
+    luaConfigRC.flashPickerFix =
+      dag.entryAfter ["coreSettings"]
+      # lua
+      ''
+        vim.api.nvim_create_autocmd("FileType", {
+          pattern = "minipick",
+          callback = function(args)
+            vim.keymap.set("n", "<CR>", "<CR>", { buffer = args.buf, remap = false })
+          end,
+        })
       '';
 
     # ── LSP keymaps (via Lspsaga) ────────────────────────────────────────
@@ -323,6 +278,8 @@ in {
             f = spec_treesitter({ a = '@function.outer', i = '@function.inner' }),
             c = spec_treesitter({ a = '@class.outer', i = '@class.inner' }),
             o = spec_treesitter({ a = '@conditional.outer', i = '@conditional.inner' }),
+            a = spec_treesitter({ a = '@parameter.outer', i = '@parameter.inner' }),
+            B = spec_treesitter({ a = '@block.outer', i = '@block.inner' }),
           }
         })
       '';
@@ -332,18 +289,16 @@ in {
       dag.entryAfter ["coreSettings"]
       # lua
       ''
-        -- All pickers use nxc_pick_match: case-insensitive fuzzy, ' for exact, ^ for case-sensitive
         local nxc_source = function(opts)
-          opts.match = _G.nxc_pick_match
           return MiniPick.start({ source = opts })
         end
 
         -- ── Pickers (mini.pick) ──
-        vim.keymap.set("n", "<leader>f", function() MiniPick.builtin.files({ source = { match = _G.nxc_pick_match }}) end, {desc = "Find files"})
-        vim.keymap.set("n", "<leader>g", function() MiniPick.builtin.grep_live({ source = { match = _G.nxc_pick_match }}) end, {desc = "Live grep"})
-        vim.keymap.set("n", "<leader>b", function() MiniPick.builtin.buffers({ source = { match = _G.nxc_pick_match }}) end, {desc = "Buffers"})
-        vim.keymap.set("n", "<leader>/", function() MiniPick.builtin.grep({pattern = vim.fn.expand("<cword>"), source = { match = _G.nxc_pick_match }}) end, {desc = "Grep word under cursor"})
-        vim.keymap.set("n", "<leader>h", function() MiniPick.builtin.help({ source = { match = _G.nxc_pick_match }}) end, {desc = "Help tags"})
+        vim.keymap.set("n", "<leader>f", function() MiniPick.builtin.files({}) end, {desc = "Find files"})
+        vim.keymap.set("n", "<leader>g", function() MiniPick.builtin.grep_live({}) end, {desc = "Live grep"})
+        vim.keymap.set("n", "<leader>b", function() MiniPick.builtin.buffers({}) end, {desc = "Buffers"})
+        vim.keymap.set("n", "<leader>/", function() MiniPick.builtin.grep({pattern = vim.fn.expand("<cword>")}) end, {desc = "Grep word under cursor"})
+        vim.keymap.set("n", "<leader>h", function() MiniPick.builtin.help({}) end, {desc = "Help tags"})
 
         -- ── Frecent files (mini.visits) ──
         vim.keymap.set("n", "<leader>v", function() MiniVisits.select_path() end, {desc = "Recent files"})
@@ -373,7 +328,6 @@ in {
             source = {
               items = keymaps,
               name = "Keymaps",
-              match = _G.nxc_pick_match,
               choose = function(item)
                 local lhs = vim.trim(item:match("^(%S+)"))
                 vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(lhs, true, false, true), "m", false)
@@ -385,15 +339,45 @@ in {
         -- ── Undotree ──
         vim.keymap.set("n", "<leader>u", ":UndotreeToggle<CR>", {silent = true, desc = "Undo tree"})
 
+        -- ── Treesitter inspect ──
+        vim.keymap.set("n", "<leader>ti", ":InspectTree<CR>", {silent = true, desc = "Treesitter AST"})
+
         -- ── Treesitter incremental selection ──
+        local ts_node_stack = {}
+
+        local function ts_select_node(node)
+          if not node then return end
+          local sr, sc, er, ec = node:range()
+          -- ec is exclusive, adjust for visual mode
+          vim.fn.setpos("'<", {0, sr + 1, sc + 1, 0})
+          vim.fn.setpos("'>", {0, er + 1, ec, 0})
+          vim.cmd("normal! gv")
+        end
+
         vim.keymap.set("n", "<C-space>", function()
-          require("nvim-treesitter.incremental_selection").init_selection()
+          local node = vim.treesitter.get_node()
+          if node then
+            ts_node_stack = {node}
+            ts_select_node(node)
+          end
         end, {desc = "Init treesitter selection"})
+
         vim.keymap.set("v", "<C-space>", function()
-          require("nvim-treesitter.incremental_selection").node_incremental()
+          local current = ts_node_stack[#ts_node_stack]
+          if current then
+            local parent = current:parent()
+            if parent then
+              table.insert(ts_node_stack, parent)
+              ts_select_node(parent)
+            end
+          end
         end, {desc = "Expand selection"})
+
         vim.keymap.set("v", "<C-S-space>", function()
-          require("nvim-treesitter.incremental_selection").node_decremental()
+          if #ts_node_stack > 1 then
+            table.remove(ts_node_stack)
+            ts_select_node(ts_node_stack[#ts_node_stack])
+          end
         end, {desc = "Shrink selection"})
       '';
 

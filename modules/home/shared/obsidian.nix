@@ -1,5 +1,5 @@
 {pkgs, ...}: {
   programs.obsidian = {
-    enable = true;
+    enable = pkgs.stdenv.isLinux; # Linux-only HM module; darwin uses App Store
   };
 }
