@@ -65,11 +65,13 @@ vim.api.nvim_create_autocmd("FileType", {
       vim.api.nvim_put({ "\\incfig{" .. name .. "}" }, "l", true, true)
     end, { buffer = true, desc = "Create Inkscape figure and insert \\incfig{}" })
 
-    -- <C-f> in normal: open rofi picker to choose and edit an existing figure
-    vim.keymap.set("n", "<C-f>", function()
-      vim.fn.jobstart({ "inkscape-figures", "edit",
-        vim.fn.expand("%:p:h") .. "/figures" })
-    end, { buffer = true, desc = "Edit existing Inkscape figure" })
+    -- <C-f> in normal: open picker to choose and edit an existing figure (Linux only — uses rofi)
+    if vim.fn.has("mac") == 0 then
+      vim.keymap.set("n", "<C-f>", function()
+        vim.fn.jobstart({ "inkscape-figures", "edit",
+          vim.fn.expand("%:p:h") .. "/figures" })
+      end, { buffer = true, desc = "Edit existing Inkscape figure" })
+    end
 
   end,
 })

@@ -6,20 +6,20 @@
   ...
 }: let
   inherit (nvf.lib.nvim) dag;
+  isLinux = pkgs.stdenv.isLinux;
   vimtexViewer =
     if pkgs.stdenv.isDarwin
     then "skim"
     else "zathura";
 in {
-  # Actual nvim config options, separate to avoid mega indentation
   config.vim = {
-    # Enable theming
     theme.enable = true;
 
     # Treesitter AST Parsing
     treesitter = {
       enable = true;
       textobjects.enable = true;
+      context.enable = true;
     };
 
     # LSP Support
@@ -32,7 +32,7 @@ in {
       servers.ocaml-lsp.cmd = lib.mkForce ["ocamllsp"];
     };
 
-    # LaTeX Support — vimtex is a VimScript plugin; configure via Lua globals, no setup() call
+    # LaTeX Support — vimtex is a VimScript plugin; configure via Lua globals
     extraPlugins = {
       vimtex = {
         package = pkgs.vimPlugins.vimtex;
@@ -47,7 +47,7 @@ in {
 
     formatter.conform-nvim.enable = true;
 
-    # Language Settings
+    # Language Settings — treesitter everywhere, LSP from devShells for rust/ocaml
     languages = {
       nix = {
         enable = true;
@@ -60,7 +60,7 @@ in {
         enable = true;
         lsp.enable = true;
         treesitter.enable = true;
-        format.enable = true; # ocamlformat resolved from active devshell PATH via direnv
+        format.enable = true;
       };
       lua = {
         enable = true;
@@ -79,26 +79,20 @@ in {
       };
     };
 
-    telescope.enable = true;
+    # telescope removed — mini.pick handles all picker needs
 
     autocomplete.blink-cmp = {
       enable = true;
       sourcePlugins.ripgrep.enable = true;
-      # nvf merges setupOpts.keymap lists with its own defaults by concatenation,
-      # so lib.mkForce is required on every entry to replace rather than append.
       setupOpts.keymap = {
         preset = "none";
         "<C-space>" = lib.mkForce ["show" "fallback"];
-        # Explicitly clear <CR> — nvf default has ["accept" "fallback"]
         "<CR>" = lib.mkForce ["fallback"];
         "<C-e>" = lib.mkForce ["hide" "fallback"];
         "<C-n>" = lib.mkForce ["select_next" "fallback"];
         "<C-p>" = lib.mkForce ["select_prev" "fallback"];
-        # Tab: confirm highlighted item → jump snippet forward → literal tab
         "<Tab>" = lib.mkForce ["select_and_accept" "snippet_forward" "fallback"];
-        # S-Tab: jump snippet backward (<C-p> handles completion navigation)
         "<S-Tab>" = lib.mkForce ["snippet_backward" "fallback"];
-        # <M-f>/<M-b>: scroll docs — avoids <C-f> clash with Inkscape figure keybind in tex
         "<M-f>" = lib.mkForce ["scroll_documentation_down" "fallback"];
         "<M-b>" = lib.mkForce ["scroll_documentation_up" "fallback"];
       };
@@ -113,8 +107,6 @@ in {
     snippets.luasnip.enable = true;
 
     mini = {
-      # UI
-      # content.active: mirrors mini.statusline defaults plus snip/spell indicators for tex buffers.
       statusline = {
         enable = true;
         setupOpts.content.active = lib.generators.mkLuaInline ''
@@ -150,16 +142,18 @@ in {
         '';
       };
       tabline.enable = true;
-      # hues.enable = true;  # Alternative colorscheme; disabled while using Stylix
       icons.enable = true;
-      # Text editing
       ai.enable = true;
       operators.enable = true;
       surround.enable = true;
-      # Workflow
       bracketed.enable = true;
       files.enable = true;
       pick.enable = true;
+      indentscope.enable = true;
+      clue.enable = true;
+      move.enable = true;
+      splitjoin.enable = true;
+      visits.enable = true;
     };
 
     terminal.toggleterm.enable = true;
@@ -171,37 +165,87 @@ in {
       motion.flash-nvim = {
         enable = true;
         mappings.jump = "<CR>";
-        mappings.remote = "<leader>r"; # default "r" overrides operator-pending replace-char
+        mappings.remote = "<leader>r";
       };
       undotree.enable = true;
     };
 
     ui.nvim-ufo.enable = true;
 
-    # Lua Configuration files
+    # Runtime lua files (latex snippets, latex-setup autocmd)
     additionalRuntimePaths = [
       "${flakePath}/dots/nvim"
     ];
-    luaConfigRC.hotswapLua =
-      dag.entryAfter ["flakeLua"]
-      /*
-      lua
-      */
-      ''
-        require("hotswap-lua")
-      '';
 
-    luaConfigRC.flakeLua =
+    # ── Core settings (leader, undo, folds, diagnostics) ──────────────────
+    luaConfigRC.coreSettings =
       dag.entryAnywhere
       # lua
       ''
-        require("flake-lua")
+        vim.g.mapleader = " "
+        vim.opt.undofile = true
+        vim.o.foldlevel = 99
+        vim.o.foldcolumn = '0'
+
+        vim.diagnostic.config({
+          virtual_text = { spacing = 4, prefix = "●" },
+          signs = true,
+          underline = true,
+          update_in_insert = false,
+          severity_sort = true,
+          float = { border = "rounded", source = true },
+        })
+      '';
+
+    # ── Terminal escape ───────────────────────────────────────────────────
+    luaConfigRC.terminalEsc =
+      dag.entryAfter ["coreSettings"]
+      # lua
+      ''
+        vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", {silent = true, remap = true})
+      '';
+
+    # ── LSP keymaps (via Lspsaga) ────────────────────────────────────────
+    luaConfigRC.lspKeymaps =
+      dag.entryAfter ["coreSettings"]
+      # lua
+      ''
+        vim.keymap.set("n", "]d", ":Lspsaga diagnostic_jump_next<CR>", {silent = true, remap = true, desc = "Next diagnostic"})
+        vim.keymap.set("n", "[d", ":Lspsaga diagnostic_jump_prev<CR>", {silent = true, remap = true, desc = "Prev diagnostic"})
+        vim.keymap.set("n", "gd", ":Lspsaga goto_definition<CR>", {silent = true, remap = true, desc = "Go to definition"})
+        vim.keymap.set("n", "gy", ":Lspsaga goto_type_definition<CR>", {silent = true, remap = true, desc = "Go to type definition"})
+        vim.keymap.set("n", "]w", function()
+          require("lspsaga.diagnostic"):goto_next({ severity = vim.diagnostic.severity.WARN })
+        end, { desc = "Next warning" })
+      '';
+
+    # ── Treesitter textobjects (mini.ai) ─────────────────────────────────
+    luaConfigRC.treesitterTextobjects =
+      dag.entryAfter ["coreSettings"]
+      # lua
+      ''
+        local ai = require('mini.ai')
+        local spec_treesitter = ai.gen_spec.treesitter
+        ai.setup({
+          custom_textobjects = {
+            f = spec_treesitter({ a = '@function.outer', i = '@function.inner' }),
+            c = spec_treesitter({ a = '@class.outer', i = '@class.inner' }),
+            o = spec_treesitter({ a = '@conditional.outer', i = '@conditional.inner' }),
+          }
+        })
+      '';
+
+    # ── Buffer / grep keymaps ────────────────────────────────────────────
+    luaConfigRC.navigationKeymaps =
+      dag.entryAfter ["coreSettings"]
+      # lua
+      ''
+        vim.keymap.set("n", "<leader>g", function() MiniPick.builtin.grep_live() end, {desc = "Live grep"})
       '';
 
     # Disable format-on-save globally; use <leader>lf for explicit formatting only.
-    # Applies to all languages: nix, lua, rust, ocaml, etc.
     luaConfigRC.formatExplicitOnly =
-      dag.entryAfter ["flakeLua"]
+      dag.entryAfter ["coreSettings"]
       # lua
       ''
         require("conform").setup({ format_on_save = nil })
@@ -211,10 +255,8 @@ in {
       '';
 
     # :Diff3Way <ref> — 3-panel vimdiff: current file | merge-base | <ref>
-    # Complements :DiffviewOpen HEAD...<ref> (2-panel, base-anchored).
-    # Close with :diffoff | only
     luaConfigRC.diff3Way =
-      dag.entryAfter ["flakeLua"]
+      dag.entryAfter ["coreSettings"]
       # lua
       ''
         vim.api.nvim_create_user_command("Diff3Way", function(opts)
@@ -225,7 +267,7 @@ in {
           local function open_ro(ref)
             vim.cmd("vnew")
             vim.cmd("0read !git show " .. ref .. ":" .. file)
-            vim.cmd("$delete _")      -- remove trailing blank line left by 0read
+            vim.cmd("$delete _")
             vim.bo.buftype    = "nofile"
             vim.bo.modifiable = false
             vim.cmd("diffthis")
@@ -235,20 +277,19 @@ in {
         end, { nargs = 1, desc = "3-way diff: current | merge-base | <ref>" })
       '';
 
-    # Load all tex snippets once at startup (not per-filetype open) and register
-    # the FileType autocmd for LaTeX buffer settings (spell, conceal, inkscape keybinds).
+    # LaTeX: snippets + autocmd for buffer settings
     luaConfigRC.latexSetup =
-      dag.entryAfter ["flakeLua"]
+      dag.entryAfter ["coreSettings"]
       # lua
       ''
-        vim.g.latex_snippet_mode = "full"  -- runtime default; cycle with <leader>ls
-        require("snippets.init")           -- load all tex snippets once
-        require("latex-setup")             -- register FileType autocmd for tex buffers
+        vim.g.latex_snippet_mode = "full"  -- runtime default; cycle with <leader>lm
+        require("snippets.init")
+        require("latex-setup")
       '';
 
     # Mutable fragment overrides (nxc mut) — load all .lua files from the mutable dir
     luaConfigRC.nxcMutable =
-      dag.entryAfter ["hotswapLua" "flakeLua" "formatExplicitOnly" "diff3Way" "latexSetup"]
+      dag.entryAfter ["coreSettings" "lspKeymaps" "treesitterTextobjects" "navigationKeymaps" "formatExplicitOnly" "diff3Way" "latexSetup"]
       # lua
       ''
         local mutable_dir = vim.fn.expand("~/.local/state/mutable/nvim")
