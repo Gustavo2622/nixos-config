@@ -5,6 +5,7 @@
 
   darwinOverlays = [
     (import ./darwin/erlang-ls-compat.nix)
+    (import ./darwin/direnv-skip-check.nix)
   ];
 
   platformOverlay = final: prev: let
