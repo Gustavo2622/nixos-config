@@ -43,7 +43,6 @@ _: {
       "ollama-app"
 
       # Dev
-      "colima" # Docker runtime (lightweight, no Docker Desktop)
       "vscodium"
 
       # Window management
@@ -51,6 +50,7 @@ _: {
     ];
 
     brews = [
+      "colima" # Docker runtime (formula, not cask)
       "docker"
       "docker-compose"
       "qemu"
