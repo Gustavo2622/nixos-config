@@ -40,6 +40,7 @@
     ./networking.nix
     ./nh.nix
     ./nix.nix
+    ./ollama.nix
     ./printing.nix
     ./rtc-wake.nix
     ./quickshell.nix

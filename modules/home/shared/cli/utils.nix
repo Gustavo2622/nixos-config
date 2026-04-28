@@ -28,6 +28,7 @@
     gnupg # GPG encryption
     gnused # Stream editor
     gnutar # Archive tool
+    mergiraf # Structured merge driver for git (language-aware conflict resolution)
     tree # Directory tree viewer
 
     # Encryption / secrets
