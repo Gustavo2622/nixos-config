@@ -30,5 +30,9 @@ python3Packages.buildPythonApplication {
 
   makeWrapperArgs = [
     "--prefix PATH : ${lib.makeBinPath [bubblewrap direnv git]}"
+    # Pin the exact non-setuid bwrap — NixOS prepends /run/wrappers/bin
+    # (a setuid bwrap built without setuid support) to PATH, which would
+    # otherwise shadow our bubblewrap and fail.
+    "--set NXC_BWRAP ${bubblewrap}/bin/bwrap"
   ];
 }

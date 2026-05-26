@@ -305,6 +305,38 @@ def test_bwrap_nix_store_always_ro():
     assert found, "Expected /nix/store to always be RO bound"
 
 
+# ── Environment building ───────────────────────────────────────────────
+
+def test_build_env_no_none_values():
+    """build_env must never return None values (os.execvpe rejects them)."""
+    env = sb.build_env(strict=True, project="/tmp")  # strict skips direnv
+    for k, v in env.items():
+        assert isinstance(v, str), f"env[{k}] = {v!r} is not a string"
+
+def test_build_env_direnv_null_unsets(monkeypatch=None):
+    """A direnv null value should unset the var, not insert None."""
+    import json
+    import subprocess as _sp
+
+    class FakeResult:
+        returncode = 0
+        stdout = json.dumps({"FOO": "bar", "REMOVED": None})
+
+    orig_run = sb.subprocess.run
+    orig_environ = dict(os.environ)
+    sb.subprocess.run = lambda *a, **k: FakeResult()
+    os.environ["REMOVED"] = "should-be-gone"
+    try:
+        env = sb.build_env(strict=False, project="/tmp")
+        assert env.get("FOO") == "bar", "Expected FOO=bar from direnv"
+        assert "REMOVED" not in env, "null value should unset the var"
+        assert all(isinstance(v, str) for v in env.values()), "no None values allowed"
+    finally:
+        sb.subprocess.run = orig_run
+        os.environ.clear()
+        os.environ.update(orig_environ)
+
+
 # ── Profile loading ────────────────────────────────────────────────────
 
 def test_load_profile_missing():

@@ -204,11 +204,19 @@ def build_env(strict: bool, project: str) -> dict[str, str]:
             if result.returncode == 0 and result.stdout.strip():
                 import json
                 direnv_env = json.loads(result.stdout)
-                env.update(direnv_env)
+                # direnv represents an unset variable as a null value — apply it
+                # as a deletion rather than putting None into the environment
+                # (os.execvpe rejects non-string values).
+                for key, value in direnv_env.items():
+                    if value is None:
+                        env.pop(key, None)
+                    else:
+                        env[key] = value
         except FileNotFoundError:
             pass  # direnv not available, that's fine
 
-    return env
+    # Defensive: drop any non-string values that slipped through
+    return {k: v for k, v in env.items() if isinstance(v, str)}
 
 
 def main():
@@ -252,13 +260,17 @@ def main():
             print(f"  {exists} {mode:5s}  {path}")
         print()
         print("bwrap command:")
-        print("  bwrap", " ".join(bwrap_args), "--", *cmd if cmd else ["<command>"])
+        bwrap = os.environ.get("NXC_BWRAP", "bwrap")
+        print(" ", bwrap, " ".join(bwrap_args), "--", *cmd if cmd else ["<command>"])
         return
 
     env = build_env(args.strict, project)
 
-    full_cmd = ["bwrap"] + bwrap_args + ["--"] + cmd
-    os.execvpe("bwrap", full_cmd, env)
+    # Use the pinned non-setuid bwrap (NXC_BWRAP set by the nix wrapper).
+    # Falls back to PATH lookup for direct/dev invocation.
+    bwrap = os.environ.get("NXC_BWRAP", "bwrap")
+    full_cmd = [bwrap] + bwrap_args + ["--"] + cmd
+    os.execvpe(bwrap, full_cmd, env)
 
 
 if __name__ == "__main__":

@@ -14,3 +14,7 @@ result-*
 *.nav
 *.snm
 *.vrb
+
+# Python
+__pycache__/
+*.pyc
