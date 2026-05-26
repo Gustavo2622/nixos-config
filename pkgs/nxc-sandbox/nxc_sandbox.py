@@ -61,6 +61,42 @@ def get_mode_for_path(target: str, rules: dict[str, str]) -> str:
     return best_mode
 
 
+def emit_block_or_bind(path: str, mode: str) -> list[str]:
+    """Emit bwrap args for a single path according to its mode.
+
+    Modes:
+      "rw"    — bind read-write:  ["--bind", path, path]
+      "ro"    — bind read-only:   ["--ro-bind", path, path]
+      "block" — shadow/hide the path so a parent bind doesn't expose it.
+
+    The "block" case is the security-critical one. A blocked path may be a
+    directory (e.g. ~/.ssh) or a file (e.g. $PROJECT/.env), and may or may
+    not exist on the host. The goal: after this returns, the path must be
+    inaccessible inside the sandbox even though its parent is bind-mounted.
+
+    bwrap primitives available:
+      ["--tmpfs", path]              mount empty tmpfs (dirs only; path must exist in sandbox)
+      ["--ro-bind", "/dev/null", p]  shadow a file with an empty null device
+      ["--dir", path]                create an empty dir (no host passthrough)
+
+    Block strategy (err toward over-blocking — safe failure for a security tool):
+      - directory       → --tmpfs (empty tmpfs shadows the real dir)
+      - file            → --ro-bind /dev/null (appears as empty, unreadable)
+      - nonexistent     → --tmpfs (bwrap creates the mountpoint; blocks even
+                          if the app tries to create the path later)
+    """
+    if mode == "rw":
+        return ["--bind", path, path]
+    if mode == "ro":
+        return ["--ro-bind", path, path]
+    if mode == "block":
+        if os.path.isfile(path):
+            return ["--ro-bind", "/dev/null", path]
+        # directory or nonexistent — shadow with empty tmpfs
+        return ["--tmpfs", path]
+    raise ValueError(f"unknown mode: {mode}")
+
+
 def rules_to_bwrap_args(rules: dict[str, str], strict: bool, permissive: bool) -> list[str]:
     """Convert resolved path rules to bwrap command-line arguments."""
     args = []
@@ -70,15 +106,21 @@ def rules_to_bwrap_args(rules: dict[str, str], strict: bool, permissive: bool) -
     args += ["--proc", "/proc"]
     args += ["--tmpfs", "/tmp"]
 
-    # Separate rules by mode
-    for path, mode in sorted(rules.items()):
-        if not os.path.exists(path):
-            continue
+    # Sort by path depth (shallow first) so parent binds are applied before
+    # child shadows/re-allows. bwrap processes mounts in order — a later mount
+    # on a sub-path shadows an earlier mount on its parent.
+    def depth(item):
+        return item[0].rstrip("/").count("/")
+
+    for path, mode in sorted(rules.items(), key=depth):
         if mode == "rw":
-            args += ["--bind", path, path]
+            if os.path.exists(path):
+                args += emit_block_or_bind(path, "rw")
         elif mode == "ro":
-            args += ["--ro-bind", path, path]
-        # block = don't bind (deny by default means not binding = blocked)
+            if os.path.exists(path):
+                args += emit_block_or_bind(path, "ro")
+        elif mode == "block":
+            args += emit_block_or_bind(path, "block")
 
     # System essentials (always RO)
     for p in ["/etc/resolv.conf", "/etc/ssl", "/etc/hosts", "/run/current-system"]:
