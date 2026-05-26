@@ -49,6 +49,8 @@ in {
       shell = pkgs.zsh;
       ignoreShellProgramCheck = true;
     };
-    nix.settings.allowed-users = ["${username}"];
+    # gitea-runner needs daemon access for CI (nix fmt/flake check/build).
+    # Without it the daemon resets the runner's connection ("Connection reset by peer").
+    nix.settings.allowed-users = ["${username}" "gitea-runner"];
   };
 }
