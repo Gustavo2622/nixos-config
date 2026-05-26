@@ -11,21 +11,21 @@
       luaformatter
       lua-language-server
       taplo
-    nil
-    # jq-lsp
-    vscode-langservers-extracted
-    bash-language-server
-    awk-language-server
-    vscode-extensions.llvm-vs-code-extensions.vscode-clangd
-    clang-tools
-    docker-compose-language-service
-    docker-compose
-    docker-language-server
-    # typescript-language-server
-  ]
-  ++ lib.optionals pkgs.stdenv.isLinux [
-    marksman # dotnet-based, hangs on darwin
-  ];
+      nil
+      # jq-lsp
+      vscode-langservers-extracted
+      bash-language-server
+      awk-language-server
+      vscode-extensions.llvm-vs-code-extensions.vscode-clangd
+      clang-tools
+      docker-compose-language-service
+      docker-compose
+      docker-language-server
+      # typescript-language-server
+    ]
+    ++ lib.optionals pkgs.stdenv.isLinux [
+      marksman # dotnet-based, hangs on darwin
+    ];
 
   home.file.".config/helix/config.toml".text = ''
     theme = "catpuccin_mocha"

@@ -73,18 +73,18 @@ in {
       ];
 
       system.activationScripts.postActivation.text = ''
-        echo >&2 "Setting up the Dock for ${vars.username}..."
-        su ${vars.username} -s /bin/bash <<'USERBLOCK'
-haveURIs="$(${dockutil}/bin/dockutil --list | ${pkgs.coreutils}/bin/cut -f2)"
-if ! diff -wu <(echo -n "$haveURIs") <(echo -n '${wantURIs}') >&2 ; then
-  echo >&2 "Resetting Dock."
-  ${dockutil}/bin/dockutil --no-restart --remove all
-  ${createEntries}
-  killall Dock
-else
-  echo >&2 "Dock setup complete."
-fi
-USERBLOCK
+                echo >&2 "Setting up the Dock for ${vars.username}..."
+                su ${vars.username} -s /bin/bash <<'USERBLOCK'
+        haveURIs="$(${dockutil}/bin/dockutil --list | ${pkgs.coreutils}/bin/cut -f2)"
+        if ! diff -wu <(echo -n "$haveURIs") <(echo -n '${wantURIs}') >&2 ; then
+          echo >&2 "Resetting Dock."
+          ${dockutil}/bin/dockutil --no-restart --remove all
+          ${createEntries}
+          killall Dock
+        else
+          echo >&2 "Dock setup complete."
+        fi
+        USERBLOCK
       '';
     }
   );

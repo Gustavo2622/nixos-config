@@ -8,7 +8,6 @@ _: {
       upgrade = true;
     };
 
-
     taps = [
       "nikitabobko/tap" # aerospace
     ];

@@ -201,16 +201,16 @@
   # Desktop entry for kitty-bg (Linux only)
   home.file."${config.xdg.dataHome}/applications/kitty-bg.desktop" = lib.mkIf pkgs.stdenv.isLinux {
     text = ''
-      [Desktop Entry]
-      Version=1.0
-    Type=Application
-    Name=Kitty with Background
-    Comment=Terminal emulator with random background image
-    Exec=kitty-bg
-    Icon=utilities-terminal
-    Terminal=false
-    Categories=System;TerminalEmulator;Utility;
-      Keywords=terminal;shell;prompt;
+        [Desktop Entry]
+        Version=1.0
+      Type=Application
+      Name=Kitty with Background
+      Comment=Terminal emulator with random background image
+      Exec=kitty-bg
+      Icon=utilities-terminal
+      Terminal=false
+      Categories=System;TerminalEmulator;Utility;
+        Keywords=terminal;shell;prompt;
     '';
   };
 
