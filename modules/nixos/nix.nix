@@ -13,10 +13,13 @@
   };
   nixpkgs.config.allowUnfree = true;
   environment.variables.NIXPKGS_ALLOW_UNFREE = 1;
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
+  nix.settings = {
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    trusted-users = ["root" "@wheel" "gitea-runner"];
+  };
   environment.variables.NIXOS_OZONE_WL = "1"; # Enable Native Wayland for electron
   systemd.services.nix-daemon.environment.TMPDIR = "/var/tmp";
   programs.nix-ld = {
