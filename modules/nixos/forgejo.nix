@@ -1,6 +1,11 @@
 # Forgejo: personal git forge, accessible over Tailscale.
 # Web UI on port 3000, SSH on port 3022 (avoids conflict with system SSH).
-{vars, ...}: {
+# Actions runner for CI (nix flake check, nxc health).
+{
+  vars,
+  pkgs,
+  ...
+}: {
   services.forgejo = {
     enable = true;
     settings = {
@@ -20,9 +25,41 @@
       session = {
         COOKIE_SECURE = false;
       };
+      actions = {
+        ENABLED = true;
+      };
     };
     database = {
       type = "sqlite3";
+    };
+  };
+
+  # Forgejo Actions runner — executes CI workflows on the local machine
+  services.gitea-actions-runner = {
+    package = pkgs.forgejo-runner;
+    instances.default = {
+      enable = true;
+      name = "desktop-runner";
+      url = "http://localhost:3000";
+      labels = [
+        "native:host"
+      ];
+      hostPackages = with pkgs; [
+        bash
+        coreutils
+        curl
+        gawk
+        git
+        gnused
+        nix
+        nodejs
+      ];
+      settings = {
+        runner.fetch_timeout = "10s";
+        runner.fetch_interval = "5s";
+      };
+      # Token from Forgejo admin panel: /admin/actions/runners
+      tokenFile = "/var/lib/gitea-runner/default/token";
     };
   };
 

@@ -1,0 +1,27 @@
+name: NixOS Config CI
+
+on:
+  push:
+    branches: [main, newpc_refactor]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: native
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Nix format check
+        run: nix fmt -- --check .
+
+      - name: Nix flake check
+        run: nix flake check --no-build
+
+      - name: Build NixOS configuration
+        run: nix build .#nixosConfigurations.gustavo-Desktop.config.system.build.toplevel --dry-run
+
+      - name: Health check (statix + deadnix)
+        # Report-only — no --fail. TODO: replace with nxc health --ci
+        run: |
+          nix develop -c statix check modules/ || true
+          nix develop -c deadnix modules/ || true
