@@ -6,6 +6,7 @@
 {
   lib,
   writeShellApplication,
+  callPackage,
   jq,
   fzf,
   coreutils,
@@ -20,6 +21,8 @@
   flakeRoot,
   themeName,
 }: let
+  nxc-sandbox = callPackage ../nxc-sandbox {};
+
   # Concatenate all script parts into one, with build-time constants baked in
   scriptText = ''
     # Build-time constants
@@ -37,6 +40,6 @@
 in
   writeShellApplication {
     name = "nxc";
-    runtimeInputs = [jq fzf coreutils findutils gnused diffutils git statix deadnix];
+    runtimeInputs = [jq fzf coreutils findutils gnused diffutils git statix deadnix nxc-sandbox];
     text = scriptText;
   }

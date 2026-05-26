@@ -1,0 +1,35 @@
+# Claude Code sandbox profile
+# Deny by default — only listed paths are accessible.
+# More specific paths override less specific.
+# At same specificity: block > ro > rw
+
+[paths]
+# Home: readable by default
+"~" = "ro"
+
+# Project: writable
+"$PROJECT" = "rw"
+"$PROJECT/.env" = "block"
+"$PROJECT/.env.local" = "block"
+
+# Claude config: writable (settings, memory, CLAUDE.md)
+"~/.config/claude" = "rw"
+"~/.claude" = "rw"
+
+# Mutable state: writable (nxc mut fragments)
+"~/.local/state/mutable" = "rw"
+"~/.local/state/nxc" = "rw"
+
+# Git config: readable
+"~/.config/git" = "ro"
+"~/.gitconfig" = "ro"
+
+# Blocked: sensitive directories
+"~/.ssh" = "block"
+"~/.gnupg" = "block"
+"~/.config/sops" = "block"
+"~/.mozilla" = "block"
+"~/.config/chromium" = "block"
+"~/.config/google-chrome" = "block"
+"~/Documents" = "block"
+"~/.config/Bitwarden" = "block"

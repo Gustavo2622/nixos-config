@@ -10,6 +10,8 @@ usage() {
   echo "  mut       Mutable state management"
   echo "  theme     Theme hot-swap"
   echo "  health    Config hygiene check (lint, dead code, staleness)"
+  echo "  sandbox   Run command in sandboxed environment"
+  echo "  claude    Run Claude Code in sandbox (shortcut)"
   echo ""
   echo -e "${BOLD}Examples:${NC}"
   echo "  nxc info                  System overview"
@@ -25,6 +27,8 @@ case "${1:-}" in
   mut) shift; cmd_mut "$@" ;;
   theme) shift; cmd_theme "$@" ;;
   health) shift; cmd_health "$@" ;;
+  sandbox) shift; exec nxc-sandbox "$@" ;;
+  claude) shift; exec nxc-sandbox --profile claude -- claude "$@" ;;
   -h|--help|help|"") usage ;;
   *) echo -e "${RED}Unknown command:${NC} $1" >&2; usage >&2; exit 1 ;;
 esac

@@ -140,4 +140,15 @@ in {
       '')
       registryPrograms)}
   '';
+
+  # Seed sandbox profiles (never overwrite existing)
+  home.activation.nxcSandboxProfiles = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    mkdir -p "$HOME/.config/nxc/sandbox"
+    for profile in ${../../pkgs/nxc-sandbox/profiles}/*.toml; do
+      name="$(basename "$profile")"
+      if [ ! -f "$HOME/.config/nxc/sandbox/$name" ]; then
+        cp "$profile" "$HOME/.config/nxc/sandbox/$name"
+      fi
+    done
+  '';
 }
