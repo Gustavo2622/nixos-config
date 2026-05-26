@@ -17,6 +17,7 @@
 
       # CLI utils
       alejandra # Nix code formatter (also available via nix fmt)
+      claude-code # Anthropic's CLI for Claude
       comma # Run any nixpkgs program without installing: , cowsay hello
       nix-index # Locate which package provides a binary: nix-locate bin/pandoc
       glow # Terminal Markdown renderer
