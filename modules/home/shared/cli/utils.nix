@@ -47,8 +47,21 @@
       # Monitoring (cross-platform)
       lsof # List open files and sockets
       nix-output-monitor # Pretty nix build output (nom)
+
+      # Math / computational
+      gap # Computational group theory
+      pari # Number theory (PARI/GP)
+
+      # Theorem provers
+      lean4 # Proof assistant + Mathlib
+      coq # Proof assistant (Rocq/Coq)
+
+      # Notebooks
+      jupyter # Notebook interface for all kernels
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
       clipboard-jh # Clipboard manager (X11/Wayland backends, Linux-only)
+      sage # Computer algebra system (broken on darwin)
+      singular # Polynomial computations (fragile on darwin)
     ];
 }
