@@ -10,6 +10,9 @@ in {
         extraOptions = {
           "AddKeysToAgent" = "yes";
           "IdentitiesOnly" = "yes";
+          "ServerAliveInterval" = "30";
+          "ServerAliveCountMax" = "3";
+          "TCPKeepAlive" = "yes";
         };
       };
 

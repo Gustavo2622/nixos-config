@@ -92,6 +92,7 @@
         sv = "sudo nvim";
         v = "nvim";
         c = "clear";
+        unfuck = "reset && stty sane"; # fix garbled terminal after broken SSH
         cat = "bat";
         man = "batman";
         diff = "difftastic";
