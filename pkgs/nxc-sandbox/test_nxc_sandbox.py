@@ -225,10 +225,34 @@ def test_block_file_devnull():
         result = sb.emit_block_or_bind(tf.name, "block")
         assert result == ["--ro-bind", "/dev/null", tf.name], f"Expected /dev/null shadow, got {result}"
 
-def test_block_nonexistent_tmpfs():
-    """A blocked nonexistent path is shadowed with tmpfs (over-block)."""
-    result = sb.emit_block_or_bind("/nonexistent/path/xyz123", "block")
+def test_block_nonexistent_writable_parent_tmpfs():
+    """Nonexistent blocked path under a writable parent → tmpfs (app could create it)."""
+    result = sb.emit_block_or_bind("/nonexistent/path/xyz123", "block", parent_writable=True)
     assert result == ["--tmpfs", "/nonexistent/path/xyz123"], f"Expected tmpfs, got {result}"
+
+def test_block_nonexistent_ro_parent_skip():
+    """Nonexistent blocked path under a read-only parent → skip (mkdir would fail, already inaccessible)."""
+    result = sb.emit_block_or_bind("/nonexistent/path/xyz123", "block", parent_writable=False)
+    assert result == [], f"Expected skip (empty), got {result}"
+
+def test_block_nonexistent_ro_parent_in_bwrap():
+    """A blocked nonexistent path under ro home is NOT tmpfs'd (would break bwrap mkdir)."""
+    with tempfile.TemporaryDirectory() as home:
+        ghost = os.path.join(home, ".gnupg")  # doesn't exist
+        rules = {home: "ro", ghost: "block"}
+        args = sb.rules_to_bwrap_args(rules, strict=False, permissive=False)
+        # ghost must NOT appear as a tmpfs target (parent is ro, can't mkdir)
+        tmpfs_targets = [args[i + 1] for i, a in enumerate(args) if a == "--tmpfs"]
+        assert ghost not in tmpfs_targets, f"Nonexistent block under ro parent must not be tmpfs'd"
+
+def test_block_nonexistent_rw_parent_in_bwrap():
+    """A blocked nonexistent path under rw project IS tmpfs'd (app could create it)."""
+    with tempfile.TemporaryDirectory() as proj:
+        envfile = os.path.join(proj, ".env")  # doesn't exist
+        rules = {proj: "rw", envfile: "block"}
+        args = sb.rules_to_bwrap_args(rules, strict=False, permissive=False)
+        tmpfs_targets = [args[i + 1] for i, a in enumerate(args) if a == "--tmpfs"]
+        assert envfile in tmpfs_targets, f"Nonexistent block under rw parent must be tmpfs'd"
 
 def test_block_in_bwrap_args():
     """Blocked dir appears as tmpfs in full bwrap args (shadows parent bind)."""

@@ -61,7 +61,7 @@ def get_mode_for_path(target: str, rules: dict[str, str]) -> str:
     return best_mode
 
 
-def emit_block_or_bind(path: str, mode: str) -> list[str]:
+def emit_block_or_bind(path: str, mode: str, parent_writable: bool = False) -> list[str]:
     """Emit bwrap args for a single path according to its mode.
 
     Modes:
@@ -74,16 +74,16 @@ def emit_block_or_bind(path: str, mode: str) -> list[str]:
     not exist on the host. The goal: after this returns, the path must be
     inaccessible inside the sandbox even though its parent is bind-mounted.
 
-    bwrap primitives available:
-      ["--tmpfs", path]              mount empty tmpfs (dirs only; path must exist in sandbox)
-      ["--ro-bind", "/dev/null", p]  shadow a file with an empty null device
-      ["--dir", path]                create an empty dir (no host passthrough)
-
-    Block strategy (err toward over-blocking — safe failure for a security tool):
-      - directory       → --tmpfs (empty tmpfs shadows the real dir)
-      - file            → --ro-bind /dev/null (appears as empty, unreadable)
-      - nonexistent     → --tmpfs (bwrap creates the mountpoint; blocks even
-                          if the app tries to create the path later)
+    Block strategy:
+      - existing directory   → --tmpfs (empty tmpfs shadows the real dir)
+      - existing file        → --ro-bind /dev/null (appears as empty, unreadable)
+      - nonexistent path:
+          parent writable    → --tmpfs (app could create it; shadow so writes
+                               land in throwaway tmpfs. mkdir works — parent is rw)
+          parent read-only   → [] (skip). The path can't be read (doesn't exist)
+                               nor created (RO parent blocks writes), so it's
+                               already inaccessible. Emitting --tmpfs here would
+                               fail: bwrap can't mkdir the mountpoint in a RO parent.
     """
     if mode == "rw":
         return ["--bind", path, path]
@@ -92,8 +92,11 @@ def emit_block_or_bind(path: str, mode: str) -> list[str]:
     if mode == "block":
         if os.path.isfile(path):
             return ["--ro-bind", "/dev/null", path]
-        # directory or nonexistent — shadow with empty tmpfs
-        return ["--tmpfs", path]
+        if os.path.isdir(path):
+            return ["--tmpfs", path]
+        # nonexistent: only shadow if the parent is writable (else mkdir fails
+        # and the path is inherently inaccessible anyway)
+        return ["--tmpfs", path] if parent_writable else []
     raise ValueError(f"unknown mode: {mode}")
 
 
@@ -120,7 +123,11 @@ def rules_to_bwrap_args(rules: dict[str, str], strict: bool, permissive: bool) -
             if os.path.exists(path):
                 args += emit_block_or_bind(path, "ro")
         elif mode == "block":
-            args += emit_block_or_bind(path, "block")
+            # For nonexistent blocked paths, whether we can/should shadow
+            # depends on the nearest ancestor rule's writability.
+            parent_mode = get_mode_for_path(os.path.dirname(path), rules)
+            parent_writable = parent_mode == "rw"
+            args += emit_block_or_bind(path, "block", parent_writable)
 
     # System essentials (always RO)
     for p in ["/etc/resolv.conf", "/etc/ssl", "/etc/hosts", "/run/current-system"]:
