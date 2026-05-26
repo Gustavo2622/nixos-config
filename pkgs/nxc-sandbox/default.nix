@@ -11,19 +11,21 @@ python3Packages.buildPythonApplication {
   version = "0.1.0";
   format = "other";
 
-  src = ./.;
+  # Only the script itself — keep test files, __pycache__, result symlink out of the store
+  src = lib.fileset.toSource {
+    root = ./.;
+    fileset = ./nxc_sandbox.py;
+  };
 
   propagatedBuildInputs = lib.optionals (! python3Packages.python.pkgs ? tomllib) [
     python3Packages.tomli
   ];
 
-  nativeBuildInputs = [python3Packages.wrapPython];
-
+  # buildPythonApplication auto-wraps bin/ programs once (postFixup); don't wrap manually.
   installPhase = ''
-    mkdir -p $out/bin
-    cp nxc_sandbox.py $out/bin/nxc-sandbox
-    chmod +x $out/bin/nxc-sandbox
-    wrapPythonPrograms
+    runHook preInstall
+    install -Dm755 nxc_sandbox.py $out/bin/nxc-sandbox
+    runHook postInstall
   '';
 
   makeWrapperArgs = [
