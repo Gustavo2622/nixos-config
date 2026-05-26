@@ -61,7 +61,7 @@
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
       clipboard-jh # Clipboard manager (X11/Wayland backends, Linux-only)
-      sage # Computer algebra system (broken on darwin)
+      # sage  # broken: mpmath 1.4.1 vs required <1.4. Revisit after nixpkgs fix.
       singular # Polynomial computations (fragile on darwin)
     ];
 }
