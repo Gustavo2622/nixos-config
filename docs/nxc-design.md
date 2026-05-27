@@ -350,3 +350,4 @@ All available in the devShell or NixOS system:
 - `--serve` output mode (web UI / TUI)
 - `nxc mut` menu-based editing UX
 - Activation-time JSON generation for zero-overhead `nxc info`
+- `nxc ai` — multi-provider AI CLI. Designed; spec in [`nxc-ai-design.md`](./nxc-ai-design.md).
