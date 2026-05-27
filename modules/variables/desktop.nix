@@ -5,6 +5,11 @@ rec {
   host = "${username}-Desktop";
   homePrefix = "/home";
 
+  # Tailscale MagicDNS FQDN (device name "desktop", tailnet taildd2a68).
+  # Tailscale issues a valid TLS cert for this exact name only; Caddy + all
+  # self-hosted services key their public URLs off it.
+  tailnetFqdn = "desktop.taildd2a68.ts.net";
+
   # Linux-only switchable options
   displayManager = "tui";
   stylixImage = ../../Wallpapers/PinkPurpleHaze.jpg;

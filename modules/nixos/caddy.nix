@@ -7,11 +7,11 @@
 # TLS: Caddy's native Tailscale cert getter fetches the cert for this node's
 # MagicDNS name via the local tailscaled API. Prerequisite (one-time, manual):
 # enable HTTPS for the tailnet in the Tailscale admin console (DNS settings).
-{...}: let
-  # This node's MagicDNS FQDN (tailnet taildd2a68). Tailscale issues a valid
-  # cert for this exact name only. (Tailscale device name is "desktop"; the
-  # system hostname is still gustavo-Desktop.)
-  fqdn = "desktop.taildd2a68.ts.net";
+{vars, ...}: let
+  # Node's MagicDNS FQDN (from vars). Tailscale issues a valid cert for this
+  # exact name only. (Tailscale device name "desktop"; system hostname is
+  # still gustavo-Desktop.) Services key their HTTPS vhosts off this too.
+  fqdn = vars.tailnetFqdn;
 in {
   # Let the caddy user fetch Tailscale certs via the tailscaled LocalAPI.
   services.tailscale.permitCertUid = "caddy";

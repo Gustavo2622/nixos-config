@@ -41,6 +41,7 @@
     ./networking.nix
     ./nh.nix
     ./nix.nix
+    ./ntfy.nix
     ./ollama.nix
     ./printing.nix
     ./rtc-wake.nix
@@ -53,6 +54,7 @@
     ./syncthing.nix
     ./tailscale.nix
     ./stylix.nix
+    ./uptime-kuma.nix
     ./user.nix
     ./utils.nix
     ./virtualization.nix
