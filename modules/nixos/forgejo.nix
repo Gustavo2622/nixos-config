@@ -5,25 +5,29 @@
   vars,
   pkgs,
   ...
-}: {
+}: let
+  webPort = 8445; # public HTTPS port (Caddy); Forgejo itself stays on localhost:3000
+in {
   services.forgejo = {
     enable = true;
     settings = {
       DEFAULT.APP_NAME = "forge";
       server = {
-        DOMAIN = "gustavo-Desktop";
-        HTTP_ADDR = "0.0.0.0";
+        DOMAIN = vars.tailnetFqdn;
+        # Localhost only — Caddy fronts the web UI on HTTPS. The CI runner still
+        # reaches Forgejo at localhost:3000, so no re-registration needed.
+        HTTP_ADDR = "127.0.0.1";
         HTTP_PORT = 3000;
         START_SSH_SERVER = true;
         SSH_PORT = 3022;
         SSH_LISTEN_PORT = 3022;
-        ROOT_URL = "http://gustavo-Desktop:3000/";
+        ROOT_URL = "https://${vars.tailnetFqdn}:${toString webPort}/";
       };
       service = {
         DISABLE_REGISTRATION = true;
       };
       session = {
-        COOKIE_SECURE = false;
+        COOKIE_SECURE = true; # served over HTTPS via Caddy
       };
       actions = {
         ENABLED = true;
@@ -63,6 +67,17 @@
     };
   };
 
-  # Open Forgejo ports (accessible via Tailscale)
-  networking.firewall.allowedTCPPorts = [3000 3022];
+  # Caddy fronts the web UI on its own HTTPS port with the node's Tailscale cert.
+  services.caddy.virtualHosts."${vars.tailnetFqdn}:${toString webPort}" = {
+    extraConfig = ''
+      tls {
+        get_certificate tailscale
+      }
+      reverse_proxy 127.0.0.1:3000
+    '';
+  };
+
+  # Public ports over Tailscale: HTTPS web UI (Caddy) + git-over-SSH.
+  # :3000 is no longer exposed — Forgejo binds to localhost.
+  networking.firewall.allowedTCPPorts = [webPort 3022];
 }
