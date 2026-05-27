@@ -13,6 +13,7 @@
     ./audio.nix
     ./boot.nix
     ./cachix.nix
+    ./caddy.nix
     ./editor.nix
     ./flatpak.nix
     ./fonts.nix
