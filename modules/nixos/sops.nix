@@ -1,27 +1,31 @@
-# SOPS-nix secrets with age encryption using SSH key at ~/.ssh/id_ed25519;
-# currently manages the bitwarden master password secret.
+# sops-nix: declarative secrets on NixOS.
+#
+# Server-side secrets live in `secrets/server.yaml` (sops-encrypted to the
+# desktop host age key + the user's personal age key). At activation,
+# sops-nix decrypts and mounts each declared secret at /run/secrets/<name>
+# with the configured owner/mode.
+#
+# Editing: `sops secrets/server.yaml` (using either age identity). The host
+# private key lives at /var/lib/sops-nix/key.txt (root-only, NOT in /nix/store).
+# Migration to YubiKey via age-plugin-yubikey is Phase-16 work.
 {
-  sops-nix,
+  inputs,
   pkgs,
-  vars,
   ...
-} @ inputs: rec {
-  imports = [
-    sops-nix.nixosModules.sops
-  ];
+}: {
+  imports = [inputs.sops-nix.nixosModules.sops];
 
-  config = {
-    sops = {
-      defaultSopsFile = ./secrets/secrets.yaml;
+  sops = {
+    defaultSopsFile = ../../secrets/server.yaml;
+    age.keyFile = "/var/lib/sops-nix/key.txt";
 
-      age.sshKeyPaths = ["/home/${vars.username}/.ssh/id_ed25519"];
-      secrets = {
-        "bitwarden/master-pass" = {};
-      };
+    secrets.caddy_desec_env = {
+      owner = "caddy";
+      group = "caddy";
+      mode = "0400";
+      restartUnits = ["caddy.service"];
     };
-    environment.systemPackages = with pkgs; [
-      sops
-      ssh-to-age # to allow secrets management
-    ];
   };
+
+  environment.systemPackages = with pkgs; [sops age];
 }

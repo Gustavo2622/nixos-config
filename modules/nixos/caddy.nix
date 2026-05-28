@@ -8,10 +8,10 @@
 # Path-based routing was the v1; we're moving to per-service subdomains under
 # the deSEC domain. Existing :port vhosts stay during the transition.
 #
-# deSEC API token lives at /var/lib/caddy/desec-env (root-owned, mode 600),
-# loaded as $DESEC_API_TOKEN via the systemd EnvironmentFile. NOT in the nix
-# store. Sops-nix on NixOS isn't wired yet (TODO).
+# deSEC API token is delivered by sops-nix as /run/secrets/caddy_desec_env
+# (owner=caddy, mode 0400). See modules/nixos/sops.nix.
 {
+  config,
   vars,
   pkgs,
   lib,
@@ -23,11 +23,9 @@ in {
   # Let the caddy user fetch Tailscale certs via the tailscaled LocalAPI.
   services.tailscale.permitCertUid = "caddy";
 
-  # Load deSEC API token at runtime. The "-" prefix makes the file optional so
-  # caddy doesn't fail to start if the token hasn't been planted yet (the
-  # tailscale-cert vhost keeps working in that case; ACME for subdomains fails
-  # loudly in the journal until the file is in place).
-  systemd.services.caddy.serviceConfig.EnvironmentFile = "-/var/lib/caddy/desec-env";
+  # Load deSEC API token at runtime from the sops-rendered env file.
+  systemd.services.caddy.serviceConfig.EnvironmentFile =
+    config.sops.secrets.caddy_desec_env.path;
 
   services.caddy = {
     enable = true;

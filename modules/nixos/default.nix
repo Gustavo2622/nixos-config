@@ -48,7 +48,7 @@
     ./quickshell.nix
     ./security.nix
     ./services.nix
-    # ./sops.nix
+    ./sops.nix
     ./ssh.nix
     ./steam.nix
     ./syncthing.nix

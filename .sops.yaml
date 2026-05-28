@@ -1,6 +1,16 @@
 keys:
   - &personal age1ru766t57mgjhyrqrkaqfuleu3azf7tp7ucaxetj453c6mzd35f6sqj2tk3
+  - &desktop age1wktg73t8x6n6ulvfvtv7tjqw2s9anhxt9mxd4sqnhedl980q4qzss2x8m6
 creation_rules:
+  # Desktop-server secrets — decrypted at NixOS activation via the host age key
+  # at /var/lib/sops-nix/key.txt. Also encrypted to &personal so the user can
+  # sops-edit without sudo.
+  - path_regex: secrets/server\.(yaml|json|env|ini|sops)$
+    key_groups:
+      - age:
+        - *desktop
+        - *personal
+  # Personal secrets (bitwarden master-pass, yubikey PIN/PUK, etc.).
   - path_regex: secrets/[^/]+\.(yaml|json|env|ini|sops)$
     key_groups:
       - age:
