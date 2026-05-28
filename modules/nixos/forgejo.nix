@@ -67,14 +67,24 @@ in {
     };
   };
 
-  # Caddy fronts the web UI on its own HTTPS port with the node's Tailscale cert.
-  services.caddy.virtualHosts."${vars.tailnetFqdn}:${toString webPort}" = {
-    extraConfig = ''
-      tls {
-        get_certificate tailscale
-      }
-      reverse_proxy 127.0.0.1:3000
-    '';
+  # Caddy fronts the web UI: existing :8445 (Tailscale cert) stays during the
+  # subdomain transition; new entry under deSEC domain uses Let's Encrypt DNS-01.
+  # ROOT_URL still points at :8445 — we'll flip it after subdomain certs verify.
+  services.caddy.virtualHosts = {
+    "${vars.tailnetFqdn}:${toString webPort}" = {
+      extraConfig = ''
+        tls {
+          get_certificate tailscale
+        }
+        reverse_proxy 127.0.0.1:3000
+      '';
+    };
+    "forgejo.${vars.deSecDomain}" = {
+      extraConfig = ''
+        import le_desec
+        reverse_proxy 127.0.0.1:3000
+      '';
+    };
   };
 
   # Public ports over Tailscale: HTTPS web UI (Caddy) + git-over-SSH.

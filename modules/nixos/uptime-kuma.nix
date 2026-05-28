@@ -15,13 +15,22 @@ in {
     };
   };
 
-  services.caddy.virtualHosts."${vars.tailnetFqdn}:${toString port}" = {
-    extraConfig = ''
-      tls {
-        get_certificate tailscale
-      }
-      reverse_proxy ${backend}
-    '';
+  services.caddy.virtualHosts = {
+    "${vars.tailnetFqdn}:${toString port}" = {
+      extraConfig = ''
+        tls {
+          get_certificate tailscale
+        }
+        reverse_proxy ${backend}
+      '';
+    };
+    # New subdomain entry — Let's Encrypt cert via deSEC DNS-01.
+    "uptime.${vars.deSecDomain}" = {
+      extraConfig = ''
+        import le_desec
+        reverse_proxy ${backend}
+      '';
+    };
   };
 
   networking.firewall.allowedTCPPorts = [port];
