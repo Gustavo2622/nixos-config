@@ -5,6 +5,7 @@
 # which lets shellcheck see all definitions and usages together.
 {
   lib,
+  stdenv,
   writeShellApplication,
   callPackage,
   jq,
@@ -21,7 +22,12 @@
   flakeRoot,
   themeName,
 }: let
-  nxc-sandbox = callPackage ../nxc-sandbox {};
+  # nxc-sandbox uses bubblewrap → Linux-only. On darwin, `nxc sandbox`/
+  # `nxc claude` give a "command not found" runtime error (acceptable: those
+  # subcommands aren't applicable there anyway).
+  sandboxInputs = lib.optionals stdenv.hostPlatform.isLinux [
+    (callPackage ../nxc-sandbox {})
+  ];
 
   # Concatenate all script parts into one, with build-time constants baked in
   scriptText = ''
@@ -40,6 +46,6 @@
 in
   writeShellApplication {
     name = "nxc";
-    runtimeInputs = [jq fzf coreutils findutils gnused diffutils git statix deadnix nxc-sandbox];
+    runtimeInputs = [jq fzf coreutils findutils gnused diffutils git statix deadnix] ++ sandboxInputs;
     text = scriptText;
   }
