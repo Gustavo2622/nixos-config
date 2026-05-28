@@ -48,6 +48,7 @@
     ./quickshell.nix
     ./security.nix
     ./services.nix
+    ./searxng.nix
     ./sops.nix
     ./ssh.nix
     ./steam.nix
