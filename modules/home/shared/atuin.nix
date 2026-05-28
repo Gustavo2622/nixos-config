@@ -3,7 +3,7 @@
     enable = true;
     enableZshIntegration = false; # don't override Ctrl+R (fzf keeps it)
     settings = {
-      sync_address = "http://gustavo-Desktop:8888";
+      sync_address = "https://atuin.gxdelerue.dedyn.io";
       auto_sync = true;
       sync_frequency = "5m";
       search_mode = "fuzzy";
