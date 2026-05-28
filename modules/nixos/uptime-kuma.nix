@@ -4,8 +4,8 @@
 # Caddy fronts it on a dedicated HTTPS port with the node's Tailscale cert.
 # The app binds to localhost; only Caddy is exposed.
 {vars, ...}: let
-  port = 8444; # public HTTPS port (Caddy); subdomain replaces this later
   backend = "127.0.0.1:3001";
+  host = "uptime.${vars.deSecDomain}";
 in {
   services.uptime-kuma = {
     enable = true;
@@ -15,23 +15,12 @@ in {
     };
   };
 
-  services.caddy.virtualHosts = {
-    "${vars.tailnetFqdn}:${toString port}" = {
-      extraConfig = ''
-        tls {
-          get_certificate tailscale
-        }
-        reverse_proxy ${backend}
-      '';
-    };
-    # New subdomain entry — Let's Encrypt cert via deSEC DNS-01.
-    "uptime.${vars.deSecDomain}" = {
-      extraConfig = ''
-        import le_desec
-        reverse_proxy ${backend}
-      '';
-    };
+  services.caddy.virtualHosts."${host}" = {
+    extraConfig = ''
+      import le_desec
+      reverse_proxy ${backend}
+    '';
   };
 
-  networking.firewall.allowedTCPPorts = [port];
+  # No public ports — Caddy fronts the subdomain on :443.
 }

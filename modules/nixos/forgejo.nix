@@ -6,14 +6,14 @@
   pkgs,
   ...
 }: let
-  webPort = 8445; # public HTTPS port (Caddy); Forgejo itself stays on localhost:3000
+  host = "forgejo.${vars.deSecDomain}";
 in {
   services.forgejo = {
     enable = true;
     settings = {
       DEFAULT.APP_NAME = "forge";
       server = {
-        DOMAIN = vars.tailnetFqdn;
+        DOMAIN = host;
         # Localhost only — Caddy fronts the web UI on HTTPS. The CI runner still
         # reaches Forgejo at localhost:3000, so no re-registration needed.
         HTTP_ADDR = "127.0.0.1";
@@ -21,7 +21,7 @@ in {
         START_SSH_SERVER = true;
         SSH_PORT = 3022;
         SSH_LISTEN_PORT = 3022;
-        ROOT_URL = "https://${vars.tailnetFqdn}:${toString webPort}/";
+        ROOT_URL = "https://${host}/";
       };
       service = {
         DISABLE_REGISTRATION = true;
@@ -67,27 +67,15 @@ in {
     };
   };
 
-  # Caddy fronts the web UI: existing :8445 (Tailscale cert) stays during the
-  # subdomain transition; new entry under deSEC domain uses Let's Encrypt DNS-01.
-  # ROOT_URL still points at :8445 — we'll flip it after subdomain certs verify.
-  services.caddy.virtualHosts = {
-    "${vars.tailnetFqdn}:${toString webPort}" = {
-      extraConfig = ''
-        tls {
-          get_certificate tailscale
-        }
-        reverse_proxy 127.0.0.1:3000
-      '';
-    };
-    "forgejo.${vars.deSecDomain}" = {
-      extraConfig = ''
-        import le_desec
-        reverse_proxy 127.0.0.1:3000
-      '';
-    };
+  # Caddy fronts the web UI on the deSEC subdomain (LE cert via DNS-01).
+  services.caddy.virtualHosts."${host}" = {
+    extraConfig = ''
+      import le_desec
+      reverse_proxy 127.0.0.1:3000
+    '';
   };
 
-  # Public ports over Tailscale: HTTPS web UI (Caddy) + git-over-SSH.
-  # :3000 is no longer exposed — Forgejo binds to localhost.
-  networking.firewall.allowedTCPPorts = [webPort 3022];
+  # Public ports: Caddy's HTTPS is on :443 (opened in caddy.nix); git-over-SSH
+  # stays on :3022. :3000 is not exposed — Forgejo binds to localhost.
+  networking.firewall.allowedTCPPorts = [3022];
 }
