@@ -56,6 +56,7 @@
     ./stylix.nix
     ./uptime-kuma.nix
     ./user.nix
+    ./vaultwarden.nix
     ./utils.nix
     ./virtualization.nix
     ./windows.nix
