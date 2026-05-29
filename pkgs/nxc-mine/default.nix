@@ -18,7 +18,7 @@
 in
   stdenvNoCC.mkDerivation {
     pname = "nxc-mine";
-    version = "0.1.0";
+    version = "0.2.0";
 
     src = lib.fileset.toSource {
       root = ./.;
@@ -27,6 +27,9 @@ in
         ./store.py
         ./config.py
         ./schema.sql
+        ./ollama.py
+        ./extract.py
+        ./dedup.py
         ./sources
       ];
     };
@@ -36,7 +39,8 @@ in
     installPhase = ''
       runHook preInstall
       mkdir -p $out/lib/nxc-mine/sources
-      install -m644 store.py config.py schema.sql $out/lib/nxc-mine/
+      install -m644 store.py config.py schema.sql ollama.py extract.py dedup.py \
+        $out/lib/nxc-mine/
       install -m644 sources/*.py $out/lib/nxc-mine/sources/
       install -Dm755 nxc_mine.py $out/lib/nxc-mine/nxc_mine.py
       makeWrapper ${pyEnv}/bin/python3 $out/bin/nxc-mine \

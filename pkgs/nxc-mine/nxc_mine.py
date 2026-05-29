@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """nxc-mine — research/content mining framework for nxc.
 
-First slice: `nxc mine research <init|ingest|papers>`.
-`nxc mine language ...` (Phase 13) becomes a sibling subcommand later; the
-namespace was carved out so we don't have to rename when that lands.
+`nxc mine research <init|ingest|embed|extract|papers|problems|assumptions|review>`.
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import sys
 from typing import Iterable
 
 import config
+import dedup as dedup_mod
+import extract as extract_mod
+import ollama
 import store
 
 
@@ -22,12 +24,11 @@ import store
 
 def _cmd_research_init(_: argparse.Namespace) -> int:
     store.init_schema()
-    print("Schema applied (papers, ingest_runs, pgvector extension).")
+    print("Schema applied (papers, problems, assumptions, edges, review_queue).")
     return 0
 
 
 def _cmd_research_ingest(args: argparse.Namespace) -> int:
-    """Pull recent papers from the chosen sources into the DB."""
     since = dt.date.today() - dt.timedelta(days=args.window)
     sources = args.sources or ["arxiv", "eprint"]
     total_found = total_new = total_upd = total_err = 0
@@ -41,7 +42,6 @@ def _cmd_research_ingest(args: argparse.Namespace) -> int:
             try:
                 if source == "arxiv":
                     from sources import arxiv
-
                     papers, errs = arxiv.fetch(
                         categories=conf["arxiv"]["categories"],
                         since=since,
@@ -50,11 +50,10 @@ def _cmd_research_ingest(args: argparse.Namespace) -> int:
                 elif source == "eprint":
                     ep = conf.get("eprint", {})
                     if not ep.get("enabled", False):
-                        store.finish_ingest_run(run.id, found=0, new=0, updated=0, errors=0,
-                                                notes="eprint disabled for this category")
+                        store.finish_ingest_run(run.id, found=0, new=0, updated=0,
+                                                errors=0, notes="eprint disabled for this category")
                         continue
                     from sources import eprint
-
                     papers, errs = eprint.fetch(
                         since=since,
                         areas=ep.get("areas") or None,
@@ -62,21 +61,17 @@ def _cmd_research_ingest(args: argparse.Namespace) -> int:
                     )
                 else:
                     print(f"  unknown source: {source}", file=sys.stderr)
-                    store.finish_ingest_run(run.id, found=0, new=0, updated=0, errors=1,
-                                            notes="unknown source")
+                    store.finish_ingest_run(run.id, found=0, new=0, updated=0,
+                                            errors=1, notes="unknown source")
                     total_err += 1
                     continue
-
                 new, upd = store.upsert_papers(papers)
-                store.finish_ingest_run(
-                    run.id, found=len(papers), new=new, updated=upd, errors=errs
-                )
-                total_found += len(papers)
-                total_new += new
-                total_upd += upd
-                total_err += errs
+                store.finish_ingest_run(run.id, found=len(papers), new=new,
+                                        updated=upd, errors=errs)
+                total_found += len(papers); total_new += new
+                total_upd += upd; total_err += errs
                 print(f"  found={len(papers)} new={new} revised={upd} errors={errs}")
-            except Exception as e:  # noqa: BLE001 — surface for the run
+            except Exception as e:  # noqa: BLE001
                 store.finish_ingest_run(run.id, found=0, new=0, updated=0, errors=1,
                                         notes=f"{type(e).__name__}: {e}")
                 total_err += 1
@@ -88,22 +83,215 @@ def _cmd_research_ingest(args: argparse.Namespace) -> int:
     return 1 if total_err and total_found == 0 else 0
 
 
+def _cmd_research_embed(args: argparse.Namespace) -> int:
+    """Compute and store paper-level embeddings (title + abstract) for papers
+    that don't have one yet. Done in batches to amortize HTTP overhead.
+
+    `--reembed` wipes all existing paper embeddings first — use when changing
+    the embed model so old vectors aren't mixed with new (they'd be
+    incomparable).
+    """
+    if args.reembed:
+        n = store.clear_paper_embeddings()
+        print(f"Cleared {n} existing embeddings.")
+    total_done = 0
+    batch_size = max(1, args.batch)
+    while True:
+        rows = store.papers_needing_embedding(limit=batch_size)
+        if not rows:
+            break
+        texts = [f"{r['title']}\n\n{r['abstract']}" for r in rows]
+        vecs = ollama.embed(texts)
+        if len(vecs) != len(rows):
+            print(f"WARNING: requested {len(rows)} embeddings, got {len(vecs)}", file=sys.stderr)
+        for r, v in zip(rows, vecs):
+            store.set_paper_embedding(r["id"], v)
+            total_done += 1
+        print(f"  embedded {total_done} papers", flush=True)
+        if args.limit and total_done >= args.limit:
+            break
+    print(f"Done. {total_done} papers embedded.")
+    return 0
+
+
+def _cmd_research_extract(args: argparse.Namespace) -> int:
+    """Pull problems + assumptions from each paper's abstract; dedup as we go.
+
+    Concurrency model: the slow `extract_from_abstract` LLM call runs in a
+    ThreadPoolExecutor (`concurrency` workers). Dedup decisions and DB writes
+    stay on the main thread — keeping them serial avoids merge races where
+    two papers concurrently insert near-duplicate problems before either is
+    visible to the other.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    dedup_top_k = config.dedup_cfg()["top_k"]
+    concurrency = max(1, args.concurrency or config.extract_cfg()["concurrency"])
+
+    papers = store.papers_needing_extraction(limit=args.limit)
+    if not papers:
+        print("No papers need extraction.")
+        return 0
+
+    print(f"Extracting from {len(papers)} papers (concurrency={concurrency})…", flush=True)
+    counts = {"problems_new": 0, "problems_merged": 0, "problems_queued": 0,
+              "assumptions": 0, "papers_failed": 0, "papers_done": 0}
+
+    def _extract_one(paper: dict) -> tuple[dict, dict | None, Exception | None]:
+        try:
+            res = extract_mod.extract_from_abstract(paper["title"], paper["abstract"])
+            return (paper, res, None)
+        except Exception as e:  # noqa: BLE001 — surface to main thread
+            return (paper, None, e)
+
+    with ThreadPoolExecutor(max_workers=concurrency) as ex:
+        futures = [ex.submit(_extract_one, p) for p in papers]
+        for fut in as_completed(futures):
+            paper, result, err = fut.result()
+            if err is not None or result is None:
+                counts["papers_failed"] += 1
+                print(f"  [{paper['id']}] FAILED extract: "
+                      f"{type(err).__name__ if err else 'NoneResult'}: {err}",
+                      file=sys.stderr)
+                continue
+            for prob in result.get("problems", []):
+                _handle_problem(paper, prob, dedup_top_k, counts)
+            for asm in result.get("assumptions", []):
+                _handle_assumption(paper, asm, counts)
+            store.mark_paper_extracted(paper["id"])
+            counts["papers_done"] += 1
+            print(f"  [{paper['id']}] p={len(result['problems'])} "
+                  f"a={len(result['assumptions'])} "
+                  f"({counts['papers_done']}/{len(papers)})", flush=True)
+
+    print()
+    print(f"Done. problems: new={counts['problems_new']} "
+          f"merged={counts['problems_merged']} queued={counts['problems_queued']} | "
+          f"assumption-edges={counts['assumptions']} | "
+          f"papers_failed={counts['papers_failed']}")
+    print(f"Pending review queue: {store.count_review_queue()}")
+    return 0
+
+
+def _handle_problem(paper: dict, prob: dict, top_k: int, counts: dict) -> None:
+    statement = (prob.get("canonical_statement") or "").strip()
+    if not statement:
+        return  # nothing to embed/dedup
+    try:
+        vec = ollama.embed(statement)[0] or []
+    except Exception as e:  # noqa: BLE001
+        print(f"  [{paper['id']}] embed problem failed: {e}", file=sys.stderr)
+        return
+    if not vec:
+        print(f"  [{paper['id']}] empty embedding for problem; skipping", file=sys.stderr)
+        return
+
+    candidates = store.retrieve_similar_problems(
+        vec, category=paper["category"], top_k=top_k,
+    )
+
+    try:
+        d = dedup_mod.decide(statement, candidates)
+    except Exception as e:  # noqa: BLE001
+        # If the judge call fails, fall back to queueing so nothing is lost.
+        print(f"  [{paper['id']}] judge failed, queueing: {e}", file=sys.stderr)
+        store.enqueue_review(kind="new_problem",
+                            payload={"extracted": prob, "judge_error": str(e),
+                                     "candidates": [{"id": c, "sim": s}
+                                                    for (c, s) in [(cid, sim) for (cid, _, sim) in candidates]]},
+                            source_paper_id=paper["id"])
+        counts["problems_queued"] += 1
+        return
+
+    role       = prob["role"]
+    confidence = float(prob["confidence"])
+    evidence   = prob.get("evidence")
+
+    if d.decision == "accept_new":
+        new_id = store.insert_problem(
+            canonical_statement=statement,
+            problem_type=prob["problem_type"],
+            category=paper["category"],
+            embedding=vec,
+        )
+        store.add_paper_problem_edge(paper["id"], new_id, role=role,
+                                    confidence=confidence, evidence=evidence)
+        counts["problems_new"] += 1
+
+    elif d.decision == "merge_into":
+        store.add_problem_alias(d.target_id, statement)
+        store.add_paper_problem_edge(paper["id"], d.target_id, role=role,
+                                    confidence=confidence, evidence=evidence)
+        counts["problems_merged"] += 1
+
+    elif d.decision in ("specialize_of", "related_to"):
+        new_id = store.insert_problem(
+            canonical_statement=statement,
+            problem_type=prob["problem_type"],
+            category=paper["category"],
+            embedding=vec,
+        )
+        kind = "specializes" if d.decision == "specialize_of" else "related"
+        store.add_problem_problem_edge(parent_id=d.target_id, child_id=new_id, kind=kind)
+        store.add_paper_problem_edge(paper["id"], new_id, role=role,
+                                    confidence=confidence, evidence=evidence)
+        counts["problems_new"] += 1
+
+    elif d.decision == "queue":
+        store.enqueue_review(
+            kind="new_problem",
+            payload={
+                "extracted": prob,
+                "candidates": [{"id": cid, "sim": sim} for (cid, sim) in d.candidates],
+                "best_target_id": d.target_id,
+                "best_score": d.target_score,
+            },
+            source_paper_id=paper["id"],
+        )
+        counts["problems_queued"] += 1
+
+
+def _handle_assumption(paper: dict, asm: dict, counts: dict) -> None:
+    """Assumptions are keyed by canonical_name (UNIQUE), so dedup is trivially
+    enforced by the upsert. The LLM is instructed to use standard names."""
+    name = (asm.get("canonical_name") or "").strip()
+    if not name:
+        return
+    statement = (asm.get("statement") or "").strip()
+    vec: list[float] | None = None
+    if statement:
+        try:
+            vec = ollama.embed(statement)[0] or None
+        except Exception:
+            vec = None  # carry on without embedding rather than skip the edge
+    aid = store.upsert_assumption(
+        canonical_name=name,
+        statement=statement or name,  # fall back if model omitted statement
+        category=paper["category"],
+        embedding=vec,
+    )
+    store.add_paper_assumption_edge(
+        paper["id"], aid,
+        role=asm["role"],
+        parameters=(asm.get("parameters") or None),
+        confidence=float(asm["confidence"]),
+        evidence=asm.get("evidence"),
+    )
+    counts["assumptions"] += 1
+
+
 def _cmd_research_papers(args: argparse.Namespace) -> int:
     rows = store.list_papers(
-        category=args.category,
-        source=args.source,
-        search=args.search,
-        only_new=args.only_new,
-        only_revised=args.only_revised,
-        limit=args.limit,
+        category=args.category, source=args.source,
+        search=args.search, only_new=args.only_new,
+        only_revised=args.only_revised, limit=args.limit,
     )
     if not rows:
         print("(no papers match)")
         return 0
     for r in rows:
-        fp = r["first_published"]
-        lr = r["last_revised"]
-        marker = "" if fp == lr else " ↺"  # revision indicator
+        fp = r["first_published"]; lr = r["last_revised"]
+        marker = "" if fp == lr else " ↺"
         authors = ", ".join(r["authors"][:3])
         if len(r["authors"]) > 3:
             authors += f" + {len(r['authors']) - 3} more"
@@ -113,6 +301,69 @@ def _cmd_research_papers(args: argparse.Namespace) -> int:
             print(f"    tags: {', '.join(r['source_categories'])}")
     print()
     print(f"({len(rows)} shown)")
+    return 0
+
+
+def _cmd_research_problems(args: argparse.Namespace) -> int:
+    rows = store.list_problems(category=args.category, status=args.status, limit=args.limit)
+    if not rows:
+        print("(no problems yet — run `nxc mine research extract`)")
+        return 0
+    for r in rows:
+        parent = f" (specialization of #{r['parent_id']})" if r["parent_id"] else ""
+        print(f"#{r['id']}  [{r['problem_type']} / {r['status']} / {r['category']}]{parent}")
+        print(f"    {r['canonical_statement']}")
+    print()
+    print(f"({len(rows)} shown)")
+    return 0
+
+
+def _cmd_research_assumptions(args: argparse.Namespace) -> int:
+    rows = store.list_assumptions(category=args.category, limit=args.limit)
+    if not rows:
+        print("(no assumptions yet — run `nxc mine research extract`)")
+        return 0
+    for r in rows:
+        print(f"#{r['id']}  {r['canonical_name']}  [{r['category']}]")
+        print(f"    {r['statement']}")
+    print()
+    print(f"({len(rows)} shown)")
+    return 0
+
+
+def _cmd_research_review(args: argparse.Namespace) -> int:
+    rows = store.list_review_queue(status="pending", limit=args.limit)
+    if args.json:
+        # JSON is meant for piping / future TUI; keep it stable.
+        out = []
+        for r in rows:
+            r2 = dict(r)
+            for k, v in list(r2.items()):
+                if isinstance(v, (dt.datetime, dt.date)):
+                    r2[k] = v.isoformat()
+            out.append(r2)
+        print(json.dumps(out, indent=2))
+        return 0
+    if not rows:
+        print("(review queue empty)")
+        return 0
+    print(f"Pending review items: {store.count_review_queue()}\n")
+    for r in rows:
+        payload = r["payload"]
+        extracted = payload.get("extracted", {})
+        cands = payload.get("candidates", [])
+        print(f"#{r['id']}  {r['kind']}  paper={r['source_paper_id']}  "
+              f"created={r['created_at']:%Y-%m-%d}")
+        if r["kind"] == "new_problem":
+            print(f"    NEW: {extracted.get('canonical_statement')}")
+            print(f"    type={extracted.get('problem_type')} role={extracted.get('role')} "
+                  f"conf={extracted.get('confidence')}")
+            if cands:
+                print("    Closest existing:")
+                for c in cands[:3]:
+                    print(f"      #{c['id']}  sim={c['sim']:.3f}")
+        print()
+    print(f"(use --json for full payloads; TUI lands in slice 2b)")
     return 0
 
 
@@ -131,24 +382,50 @@ def build_parser() -> argparse.ArgumentParser:
 
     ing = rsub.add_parser("ingest", help="Pull recent papers into the DB")
     ing.add_argument("--source", action="append", dest="sources",
-                     choices=["arxiv", "eprint"],
-                     help="Restrict to a specific source (repeatable; default: all enabled)")
-    ing.add_argument("--category", choices=list(config.CATEGORIES.keys()),
-                     help="Restrict to one of our taxonomy buckets (default: all)")
-    ing.add_argument("--window", type=int, default=config.DEFAULT_WINDOW_DAYS,
-                     help=f"Days of history to ingest (default: {config.DEFAULT_WINDOW_DAYS})")
+                     choices=["arxiv", "eprint"])
+    ing.add_argument("--category", choices=list(config.CATEGORIES.keys()))
+    ing.add_argument("--window", type=int, default=config.DEFAULT_WINDOW_DAYS)
     ing.set_defaults(func=_cmd_research_ingest)
 
+    emb = rsub.add_parser("embed", help="Compute paper-level embeddings")
+    emb.add_argument("--batch", type=int, default=32,
+                     help="Papers per Ollama call (default 32)")
+    emb.add_argument("--limit", type=int, default=0,
+                     help="Stop after N papers (0 = no limit)")
+    emb.add_argument("--reembed", action="store_true",
+                     help="Wipe all existing paper embeddings first (use when changing embed model)")
+    emb.set_defaults(func=_cmd_research_embed)
+
+    ext = rsub.add_parser("extract", help="Extract problems + assumptions from abstracts")
+    ext.add_argument("--limit", type=int, default=20,
+                     help="Max papers to process this run (default 20; abstracts are small "
+                          "but each paper triggers ≥1 LLM call)")
+    ext.add_argument("--concurrency", type=int, default=0,
+                     help="Concurrent extract calls to Ollama (0 = use config.toml default)")
+    ext.set_defaults(func=_cmd_research_extract)
+
     pap = rsub.add_parser("papers", help="List papers in the DB")
-    pap.add_argument("--category")
-    pap.add_argument("--source")
-    pap.add_argument("--search", help="ILIKE filter on title/abstract")
-    pap.add_argument("--only-new", action="store_true",
-                     help="Only papers with no revisions yet (first_published == last_revised)")
-    pap.add_argument("--only-revised", action="store_true",
-                     help="Only papers that have been revised since first publication")
+    pap.add_argument("--category"); pap.add_argument("--source")
+    pap.add_argument("--search")
+    pap.add_argument("--only-new", action="store_true")
+    pap.add_argument("--only-revised", action="store_true")
     pap.add_argument("--limit", type=int, default=50)
     pap.set_defaults(func=_cmd_research_papers)
+
+    prob = rsub.add_parser("problems", help="List extracted problems")
+    prob.add_argument("--category"); prob.add_argument("--status")
+    prob.add_argument("--limit", type=int, default=50)
+    prob.set_defaults(func=_cmd_research_problems)
+
+    asm = rsub.add_parser("assumptions", help="List extracted assumptions")
+    asm.add_argument("--category"); asm.add_argument("--limit", type=int, default=50)
+    asm.set_defaults(func=_cmd_research_assumptions)
+
+    rev = rsub.add_parser("review", help="Inspect pending review-queue items")
+    rev.add_argument("--limit", type=int, default=20)
+    rev.add_argument("--json", action="store_true",
+                     help="Emit full payloads as JSON (TUI lands in slice 2b)")
+    rev.set_defaults(func=_cmd_research_review)
 
     return p
 

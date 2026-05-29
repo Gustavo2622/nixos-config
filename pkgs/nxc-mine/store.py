@@ -1,11 +1,18 @@
-"""Postgres helpers: connection, schema init, paper upserts, ingest-run tracking."""
+"""Postgres helpers: connection, schema init, paper upserts, problems/assumptions,
+embeddings, dedup retrieval, review queue.
+
+We deliberately avoid the pgvector-python type adapter — fewer moving parts.
+Embeddings get rendered to a `'[v1, v2, …]'::vector(1024)` literal at write
+time and parsed back via psycopg's default text decoding.
+"""
 
 from __future__ import annotations
 
 import datetime as dt
+import json
 import pathlib
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Iterable, Iterator
 
 import psycopg
@@ -18,16 +25,14 @@ _SCHEMA_PATH = pathlib.Path(__file__).parent / "schema.sql"
 
 @dataclass
 class Paper:
-    """Normalized paper record produced by source clients."""
-
-    source: str            # 'arxiv' | 'eprint' | 'venue:...'
-    ext_id: str            # source-native ID
+    source: str
+    ext_id: str
     title: str
     authors: list[str]
     first_published: dt.date | None
     last_revised: dt.date | None
-    latest_version: str | None     # 'v1'/'v3' for arXiv, revision count or datestamp for ePrint
-    category: str          # our taxonomy bucket
+    latest_version: str | None
+    category: str
     source_categories: list[str]
     abstract: str | None
     pdf_url: str | None
@@ -35,13 +40,11 @@ class Paper:
 
 @contextmanager
 def connect() -> Iterator[psycopg.Connection]:
-    """Open a connection; caller owns the transaction (autocommit off by default)."""
     with psycopg.connect(DB_DSN, row_factory=dict_row) as conn:
         yield conn
 
 
 def init_schema() -> None:
-    """Apply schema.sql idempotently. CREATE IF NOT EXISTS throughout."""
     sql = _SCHEMA_PATH.read_text()
     with connect() as conn:
         with conn.cursor() as cur:
@@ -49,20 +52,15 @@ def init_schema() -> None:
         conn.commit()
 
 
-def upsert_papers(papers: Iterable[Paper]) -> tuple[int, int]:
-    """Insert new papers; update existing rows when revision info has changed.
+# ─── ingest (unchanged from slice 2a — papers + ingest_runs) ───────────────
 
-    Returns (new_count, updated_count). An "update" only counts when the
-    incoming `last_revised` is newer than what's stored OR `latest_version`
-    has changed — re-ingesting the same row produces no count. This is what
-    lets us distinguish genuine revisions from noisy re-runs.
-    """
+
+def upsert_papers(papers: Iterable[Paper]) -> tuple[int, int]:
     new_count = 0
     upd_count = 0
     rows = list(papers)
     if not rows:
         return (0, 0)
-
     with connect() as conn:
         with conn.cursor() as cur:
             for p in rows:
@@ -86,22 +84,13 @@ def upsert_papers(papers: Iterable[Paper]) -> tuple[int, int]:
                     RETURNING (xmax = 0) AS inserted
                     """,
                     (
-                        p.source,
-                        p.ext_id,
-                        p.title,
-                        p.authors,
-                        p.first_published,
-                        p.last_revised,
-                        p.latest_version,
-                        p.category,
-                        p.source_categories,
-                        p.abstract,
-                        p.pdf_url,
+                        p.source, p.ext_id, p.title, p.authors,
+                        p.first_published, p.last_revised, p.latest_version,
+                        p.category, p.source_categories, p.abstract, p.pdf_url,
                     ),
                 )
                 row = cur.fetchone()
                 if row is None:
-                    # Existing row, nothing changed → no-op.
                     continue
                 if row["inserted"]:
                     new_count += 1
@@ -123,11 +112,9 @@ def start_ingest_run(source: str, category: str) -> IngestRun:
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                INSERT INTO ingest_runs (source, category, started_at)
-                VALUES (%s, %s, NOW())
-                RETURNING id, source, category, started_at
-                """,
+                """INSERT INTO ingest_runs (source, category, started_at)
+                   VALUES (%s, %s, NOW())
+                   RETURNING id, source, category, started_at""",
                 (source, category),
             )
             row = cur.fetchone()
@@ -135,63 +122,34 @@ def start_ingest_run(source: str, category: str) -> IngestRun:
     return IngestRun(**row)
 
 
-def finish_ingest_run(
-    run_id: int,
-    *,
-    found: int,
-    new: int,
-    updated: int,
-    errors: int = 0,
-    notes: str | None = None,
-) -> None:
+def finish_ingest_run(run_id: int, *, found: int, new: int, updated: int,
+                     errors: int = 0, notes: str | None = None) -> None:
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                UPDATE ingest_runs
-                   SET finished_at = NOW(),
-                       papers_found = %s,
-                       papers_new = %s,
-                       papers_updated = %s,
-                       errors = %s,
-                       notes = %s
-                 WHERE id = %s
-                """,
+                """UPDATE ingest_runs
+                      SET finished_at = NOW(),
+                          papers_found = %s, papers_new = %s,
+                          papers_updated = %s, errors = %s, notes = %s
+                    WHERE id = %s""",
                 (found, new, updated, errors, notes, run_id),
             )
         conn.commit()
 
 
-def list_papers(
-    *,
-    category: str | None = None,
-    source: str | None = None,
-    search: str | None = None,
-    only_new: bool = False,
-    only_revised: bool = False,
-    limit: int = 50,
-) -> list[dict]:
-    """Listing for `nxc mine research papers`.
-
-    `only_new`: papers where first_published == last_revised (no revision yet).
-    `only_revised`: papers where last_revised > first_published.
-    """
-    sql = (
-        "SELECT id, source, ext_id, title, authors, first_published, last_revised, "
-        "latest_version, category, source_categories, pdf_url FROM papers"
-    )
-    where = []
-    args: list = []
+def list_papers(*, category: str | None = None, source: str | None = None,
+                search: str | None = None, only_new: bool = False,
+                only_revised: bool = False, limit: int = 50) -> list[dict]:
+    sql = ("SELECT id, source, ext_id, title, authors, first_published, last_revised, "
+           "latest_version, category, source_categories, pdf_url FROM papers")
+    where, args = [], []
     if category:
-        where.append("category = %s")
-        args.append(category)
+        where.append("category = %s"); args.append(category)
     if source:
-        where.append("source = %s")
-        args.append(source)
+        where.append("source = %s"); args.append(source)
     if search:
         where.append("(title ILIKE %s OR abstract ILIKE %s)")
-        args.append(f"%{search}%")
-        args.append(f"%{search}%")
+        args.extend([f"%{search}%", f"%{search}%"])
     if only_new:
         where.append("last_revised IS NOT DISTINCT FROM first_published")
     if only_revised:
@@ -210,5 +168,299 @@ def count_papers() -> int:
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) AS n FROM papers")
-            row = cur.fetchone()
-            return int(row["n"]) if row else 0
+            r = cur.fetchone()
+            return int(r["n"]) if r else 0
+
+
+# ─── embeddings ────────────────────────────────────────────────────────────
+
+
+def _vec_literal(values: list[float] | None) -> str | None:
+    """Render a python list as a pgvector input literal. Returns None for
+    falsy inputs (empty list / None) — callers persist that as SQL NULL."""
+    if not values:
+        return None
+    return "[" + ",".join(repr(float(v)) for v in values) + "]"
+
+
+def papers_needing_embedding(limit: int = 200) -> list[dict]:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT id, title, abstract FROM papers
+                    WHERE embedded_at IS NULL AND abstract IS NOT NULL
+                    ORDER BY id
+                    LIMIT %s""",
+                (limit,),
+            )
+            return list(cur.fetchall())
+
+
+def clear_paper_embeddings() -> int:
+    """Wipe all paper embeddings (used when switching embed model). Returns
+    the number of rows reset."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE papers SET embedding = NULL, embedded_at = NULL
+                    WHERE embedded_at IS NOT NULL"""
+            )
+            n = cur.rowcount
+        conn.commit()
+    return n
+
+
+def set_paper_embedding(paper_id: int, embedding: list[float]) -> None:
+    lit = _vec_literal(embedding)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE papers SET embedding = %s::vector, embedded_at = NOW() WHERE id = %s",
+                (lit, paper_id),
+            )
+        conn.commit()
+
+
+def papers_needing_extraction(limit: int = 100) -> list[dict]:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT id, title, abstract, category, is_preprint
+                     FROM papers
+                    WHERE extracted_at IS NULL
+                      AND abstract IS NOT NULL
+                    ORDER BY id
+                    LIMIT %s""",
+                (limit,),
+            )
+            return list(cur.fetchall())
+
+
+def mark_paper_extracted(paper_id: int) -> None:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE papers SET extracted_at = NOW() WHERE id = %s", (paper_id,))
+        conn.commit()
+
+
+# ─── problems / assumptions ────────────────────────────────────────────────
+
+
+def insert_problem(*, canonical_statement: str, problem_type: str,
+                  category: str, embedding: list[float] | None) -> int:
+    emb_lit = _vec_literal(embedding) if embedding is not None else None
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO problems (canonical_statement, problem_type, category, embedding)
+                   VALUES (%s, %s, %s, %s::vector)
+                   RETURNING id""",
+                (canonical_statement, problem_type, category, emb_lit),
+            )
+            rid = cur.fetchone()["id"]
+        conn.commit()
+    return rid
+
+
+def add_problem_alias(problem_id: int, alias: str) -> None:
+    """Append `alias` if not already present."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE problems
+                      SET aliases = ARRAY(SELECT DISTINCT unnest(aliases || ARRAY[%s])),
+                          updated_at = NOW()
+                    WHERE id = %s""",
+                (alias, problem_id),
+            )
+        conn.commit()
+
+
+def upsert_assumption(*, canonical_name: str, statement: str,
+                     category: str, embedding: list[float] | None) -> int:
+    """Assumptions are keyed by canonical_name (UNIQUE) — second appearance of
+    'LWE' updates the existing row rather than creating a new one."""
+    emb_lit = _vec_literal(embedding) if embedding is not None else None
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO assumptions (canonical_name, statement, category, embedding)
+                   VALUES (%s, %s, %s, %s::vector)
+                   ON CONFLICT (canonical_name) DO UPDATE
+                     SET statement = EXCLUDED.statement,
+                         updated_at = NOW()
+                   RETURNING id""",
+                (canonical_name, statement, category, emb_lit),
+            )
+            rid = cur.fetchone()["id"]
+        conn.commit()
+    return rid
+
+
+def add_paper_problem_edge(paper_id: int, problem_id: int, *,
+                          role: str, confidence: float, evidence: str | None) -> None:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO paper_problem (paper_id, problem_id, role, confidence, evidence)
+                   VALUES (%s, %s, %s, %s, %s)
+                   ON CONFLICT (paper_id, problem_id, role) DO UPDATE
+                     SET confidence = GREATEST(paper_problem.confidence, EXCLUDED.confidence),
+                         evidence = COALESCE(EXCLUDED.evidence, paper_problem.evidence)""",
+                (paper_id, problem_id, role, confidence, evidence),
+            )
+        conn.commit()
+
+
+def add_paper_assumption_edge(paper_id: int, assumption_id: int, *,
+                             role: str, parameters: str | None,
+                             confidence: float, evidence: str | None) -> None:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO paper_assumption
+                       (paper_id, assumption_id, role, parameters, confidence, evidence)
+                   VALUES (%s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (paper_id, assumption_id, role) DO UPDATE
+                     SET parameters = COALESCE(EXCLUDED.parameters, paper_assumption.parameters),
+                         confidence = GREATEST(paper_assumption.confidence, EXCLUDED.confidence),
+                         evidence = COALESCE(EXCLUDED.evidence, paper_assumption.evidence)""",
+                (paper_id, assumption_id, role, parameters, confidence, evidence),
+            )
+        conn.commit()
+
+
+def add_problem_problem_edge(parent_id: int, child_id: int, kind: str) -> None:
+    if parent_id == child_id:
+        return
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO problem_problem (parent_id, child_id, kind)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT DO NOTHING""",
+                (parent_id, child_id, kind),
+            )
+        conn.commit()
+
+
+# ─── dedup retrieval ───────────────────────────────────────────────────────
+
+
+def retrieve_similar_problems(embedding: list[float], *, category: str | None,
+                             top_k: int) -> list[tuple[int, str, float]]:
+    """Return [(id, canonical_statement, similarity)] sorted by similarity desc.
+
+    pgvector's `<=>` is cosine *distance*; convert to similarity = 1 - distance.
+    """
+    lit = _vec_literal(embedding)
+    args: list = [lit]
+    where = "WHERE embedding IS NOT NULL"
+    if category:
+        where += " AND category = %s"
+        args.append(category)
+    args.append(top_k)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""SELECT id, canonical_statement,
+                          1 - (embedding <=> %s::vector) AS similarity
+                     FROM problems
+                     {where}
+                     ORDER BY embedding <=> %s::vector
+                     LIMIT %s""",
+                (args[0], *args[1:-1], args[0], args[-1]),
+            )
+            return [(r["id"], r["canonical_statement"], float(r["similarity"]))
+                    for r in cur.fetchall()]
+
+
+def retrieve_similar_assumptions(embedding: list[float], *,
+                                top_k: int) -> list[tuple[int, str, float]]:
+    lit = _vec_literal(embedding)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT id, canonical_name,
+                          1 - (embedding <=> %s::vector) AS similarity
+                     FROM assumptions
+                    WHERE embedding IS NOT NULL
+                    ORDER BY embedding <=> %s::vector
+                    LIMIT %s""",
+                (lit, lit, top_k),
+            )
+            return [(r["id"], r["canonical_name"], float(r["similarity"]))
+                    for r in cur.fetchall()]
+
+
+# ─── review queue ──────────────────────────────────────────────────────────
+
+
+def enqueue_review(*, kind: str, payload: dict,
+                  source_paper_id: int | None) -> int:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO review_queue (kind, payload, source_paper_id)
+                   VALUES (%s, %s, %s) RETURNING id""",
+                (kind, json.dumps(payload), source_paper_id),
+            )
+            rid = cur.fetchone()["id"]
+        conn.commit()
+    return rid
+
+
+def list_review_queue(status: str = "pending", limit: int = 50) -> list[dict]:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT id, kind, payload, source_paper_id, status, created_at, resolved_at
+                     FROM review_queue
+                    WHERE status = %s
+                    ORDER BY created_at ASC, id ASC
+                    LIMIT %s""",
+                (status, limit),
+            )
+            return list(cur.fetchall())
+
+
+def count_review_queue(status: str = "pending") -> int:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS n FROM review_queue WHERE status = %s", (status,))
+            r = cur.fetchone()
+            return int(r["n"]) if r else 0
+
+
+# ─── browse: problems / assumptions ────────────────────────────────────────
+
+
+def list_problems(*, category: str | None = None, status: str | None = None,
+                 limit: int = 50) -> list[dict]:
+    sql = "SELECT id, canonical_statement, problem_type, status, category, parent_id FROM problems"
+    where, args = [], []
+    if category:
+        where.append("category = %s"); args.append(category)
+    if status:
+        where.append("status = %s"); args.append(status)
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY updated_at DESC LIMIT %s"
+    args.append(limit)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, args)
+            return list(cur.fetchall())
+
+
+def list_assumptions(*, category: str | None = None, limit: int = 50) -> list[dict]:
+    sql = "SELECT id, canonical_name, statement, category FROM assumptions"
+    args: list = []
+    if category:
+        sql += " WHERE category = %s"; args.append(category)
+    sql += " ORDER BY updated_at DESC LIMIT %s"
+    args.append(limit)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, args)
+            return list(cur.fetchall())
