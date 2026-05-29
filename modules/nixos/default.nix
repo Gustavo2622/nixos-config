@@ -43,6 +43,7 @@
     ./nix.nix
     ./ntfy.nix
     ./ollama.nix
+    ./paperless.nix
     ./printing.nix
     ./rtc-wake.nix
     ./quickshell.nix
