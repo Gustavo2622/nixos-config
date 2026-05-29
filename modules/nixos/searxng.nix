@@ -15,7 +15,7 @@ in {
   services.searx = {
     enable = true;
     package = pkgs.searxng;
-    runInUwsgi = true;
+    configureUwsgi = true;
     environmentFile = config.sops.secrets.searxng_secret_key.path;
 
     # Bind uwsgi to localhost only — Caddy proxies on the public subdomain.
