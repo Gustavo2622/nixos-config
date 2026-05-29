@@ -44,6 +44,7 @@
     ./ntfy.nix
     ./ollama.nix
     ./paperless.nix
+    ./postgresql.nix
     ./printing.nix
     ./rtc-wake.nix
     ./quickshell.nix

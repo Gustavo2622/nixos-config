@@ -29,6 +29,12 @@
     (callPackage ../nxc-sandbox {})
   ];
 
+  # nxc-mine is cross-platform (Python + httpx + psycopg) but currently only
+  # talks to a Postgres on the desktop, so keep it Linux-side too for now.
+  mineInputs = lib.optionals stdenv.hostPlatform.isLinux [
+    (callPackage ../nxc-mine {})
+  ];
+
   # Concatenate all script parts into one, with build-time constants baked in
   scriptText = ''
     # Build-time constants
@@ -46,6 +52,6 @@
 in
   writeShellApplication {
     name = "nxc";
-    runtimeInputs = [jq fzf coreutils findutils gnused diffutils git statix deadnix] ++ sandboxInputs;
+    runtimeInputs = [jq fzf coreutils findutils gnused diffutils git statix deadnix] ++ sandboxInputs ++ mineInputs;
     text = scriptText;
   }
