@@ -14,11 +14,11 @@
   makeWrapper,
   lib,
 }: let
-  pyEnv = python3.withPackages (ps: with ps; [httpx psycopg]);
+  pyEnv = python3.withPackages (ps: with ps; [httpx psycopg textual]);
 in
   stdenvNoCC.mkDerivation {
     pname = "nxc-mine";
-    version = "0.2.0";
+    version = "0.3.0";
 
     src = lib.fileset.toSource {
       root = ./.;
@@ -30,6 +30,7 @@ in
         ./ollama.py
         ./extract.py
         ./dedup.py
+        ./tui.py
         ./sources
       ];
     };
@@ -39,7 +40,7 @@ in
     installPhase = ''
       runHook preInstall
       mkdir -p $out/lib/nxc-mine/sources
-      install -m644 store.py config.py schema.sql ollama.py extract.py dedup.py \
+      install -m644 store.py config.py schema.sql ollama.py extract.py dedup.py tui.py \
         $out/lib/nxc-mine/
       install -m644 sources/*.py $out/lib/nxc-mine/sources/
       install -Dm755 nxc_mine.py $out/lib/nxc-mine/nxc_mine.py

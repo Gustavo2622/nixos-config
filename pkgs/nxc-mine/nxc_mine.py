@@ -332,9 +332,8 @@ def _cmd_research_assumptions(args: argparse.Namespace) -> int:
 
 
 def _cmd_research_review(args: argparse.Namespace) -> int:
-    rows = store.list_review_queue(status="pending", limit=args.limit)
     if args.json:
-        # JSON is meant for piping / future TUI; keep it stable.
+        rows = store.list_review_queue(status="pending", limit=args.limit)
         out = []
         for r in rows:
             r2 = dict(r)
@@ -344,27 +343,9 @@ def _cmd_research_review(args: argparse.Namespace) -> int:
             out.append(r2)
         print(json.dumps(out, indent=2))
         return 0
-    if not rows:
-        print("(review queue empty)")
-        return 0
-    print(f"Pending review items: {store.count_review_queue()}\n")
-    for r in rows:
-        payload = r["payload"]
-        extracted = payload.get("extracted", {})
-        cands = payload.get("candidates", [])
-        print(f"#{r['id']}  {r['kind']}  paper={r['source_paper_id']}  "
-              f"created={r['created_at']:%Y-%m-%d}")
-        if r["kind"] == "new_problem":
-            print(f"    NEW: {extracted.get('canonical_statement')}")
-            print(f"    type={extracted.get('problem_type')} role={extracted.get('role')} "
-                  f"conf={extracted.get('confidence')}")
-            if cands:
-                print("    Closest existing:")
-                for c in cands[:3]:
-                    print(f"      #{c['id']}  sim={c['sim']:.3f}")
-        print()
-    print(f"(use --json for full payloads; TUI lands in slice 2b)")
-    return 0
+    # Interactive TUI by default.
+    import tui
+    return tui.run()
 
 
 # ─── dispatcher ─────────────────────────────────────────────────────────────
@@ -421,10 +402,11 @@ def build_parser() -> argparse.ArgumentParser:
     asm.add_argument("--category"); asm.add_argument("--limit", type=int, default=50)
     asm.set_defaults(func=_cmd_research_assumptions)
 
-    rev = rsub.add_parser("review", help="Inspect pending review-queue items")
-    rev.add_argument("--limit", type=int, default=20)
+    rev = rsub.add_parser("review", help="Interactive review queue (Textual TUI; --json for dump)")
+    rev.add_argument("--limit", type=int, default=500,
+                     help="Items to load (TUI shows them sequentially)")
     rev.add_argument("--json", action="store_true",
-                     help="Emit full payloads as JSON (TUI lands in slice 2b)")
+                     help="Skip the TUI and emit pending payloads as JSON")
     rev.set_defaults(func=_cmd_research_review)
 
     return p
