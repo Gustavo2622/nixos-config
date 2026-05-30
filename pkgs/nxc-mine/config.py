@@ -17,7 +17,12 @@ from typing import Any
 CATEGORIES = {
     "crypto": {
         "arxiv": {
-            "categories": ["cs.CR", "quant-ph"],
+            # Dropped quant-ph: too much physics noise (SYK, photonics, signal
+            # inequalities, …) that's only loosely crypto-adjacent. Quantum
+            # attacks on crypto + post-quantum proposals show up on cs.CR
+            # anyway. Re-add quant-ph with a PQC keyword filter if recall
+            # becomes an issue.
+            "categories": ["cs.CR"],
             "keywords": [],
         },
         "eprint": {
@@ -26,6 +31,36 @@ CATEGORIES = {
         },
     },
 }
+
+# Canonical hardness assumptions used in cryptography. The extract prompt
+# instructs the model to pick from this list when applicable, and to flag
+# anything new with is_novel=true (which routes to the review queue rather
+# than auto-merging by name).
+CANONICAL_ASSUMPTIONS = [
+    # Lattice
+    "LWE", "RLWE", "MLWE", "Hint-MLWE", "decisional-LWE",
+    "SIS", "Module-SIS", "Ring-SIS", "Inhomogeneous-SIS",
+    "SVP", "GapSVP", "CVP", "approx-SVP", "approx-CVP", "BDD", "LWR",
+    "NTRU", "NTRU-Assumption",
+    # Discrete log family
+    "DLP", "DLOG", "ECDLP", "CDH", "DDH", "Gap-CDH", "Strong-DH", "DBDH",
+    # Pairing-based / bilinear
+    "BDH", "DLIN", "SXDH", "q-SDH",
+    # Isogeny
+    "SIDH", "CSIDH", "isogeny-path-finding", "isogeny-CDH",
+    # Code-based
+    "syndrome-decoding", "QC-SD", "QA-SD", "Ring-LPN", "LPN", "code-based-decoding",
+    "Goppa-code", "MDPC-decoding", "rank-syndrome-decoding",
+    # Multivariate
+    "MQ", "MinRank", "PRE",
+    # Hash / generic
+    "collision-resistance", "preimage-resistance", "random-oracle",
+    # Obfuscation / advanced
+    "iO", "indistinguishability-obfuscation", "puncturable-PRF",
+    "sub-exponential-iO", "LWE-with-leakage",
+    # Factoring / RSA
+    "RSA", "factoring", "strong-RSA", "QR",
+]
 
 # ─── infra constants ──────────────────────────────────────────────────────
 

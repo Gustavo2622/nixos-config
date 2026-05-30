@@ -139,9 +139,11 @@ def finish_ingest_run(run_id: int, *, found: int, new: int, updated: int,
 
 def list_papers(*, category: str | None = None, source: str | None = None,
                 search: str | None = None, only_new: bool = False,
-                only_revised: bool = False, limit: int = 50) -> list[dict]:
+                only_revised: bool = False, non_crypto: bool = False,
+                limit: int = 50) -> list[dict]:
     sql = ("SELECT id, source, ext_id, title, authors, first_published, last_revised, "
-           "latest_version, category, source_categories, pdf_url FROM papers")
+           "latest_version, category, source_categories, pdf_url, "
+           "crypto_relevant, relevance_reason FROM papers")
     where, args = [], []
     if category:
         where.append("category = %s"); args.append(category)
@@ -154,6 +156,8 @@ def list_papers(*, category: str | None = None, source: str | None = None,
         where.append("last_revised IS NOT DISTINCT FROM first_published")
     if only_revised:
         where.append("last_revised > first_published")
+    if non_crypto:
+        where.append("crypto_relevant = FALSE")
     if where:
         sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY COALESCE(last_revised, first_published) DESC NULLS LAST, id DESC LIMIT %s"
@@ -236,11 +240,93 @@ def papers_needing_extraction(limit: int = 100) -> list[dict]:
             return list(cur.fetchall())
 
 
-def mark_paper_extracted(paper_id: int) -> None:
+def mark_paper_extracted(
+    paper_id: int,
+    *,
+    crypto_relevant: bool | None = None,
+    relevance_reason: str | None = None,
+) -> None:
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("UPDATE papers SET extracted_at = NOW() WHERE id = %s", (paper_id,))
+            cur.execute(
+                """UPDATE papers
+                      SET extracted_at = NOW(),
+                          crypto_relevant = COALESCE(%s, crypto_relevant),
+                          relevance_reason = COALESCE(%s, relevance_reason)
+                    WHERE id = %s""",
+                (crypto_relevant, relevance_reason, paper_id),
+            )
         conn.commit()
+
+
+def reset_extraction(
+    *,
+    ids: list[int] | None = None,
+    sample: int | None = None,
+    all_: bool = False,
+    purge: bool = False,
+) -> int:
+    """Wipe extracted_at + crypto_relevant + relevance_reason and the paper's
+    paper_problem / paper_assumption edges, so the next `extract` reprocesses
+    them.
+
+    `purge=True` (only valid with `all_=True`) also TRUNCATEs the derived
+    tables — problems, assumptions, problem_problem, review_queue, and all
+    edges — leaving a clean slate. Use when changing the extract prompt to
+    avoid orphaned rows from prior runs.
+
+    Returns the number of papers reset.
+    """
+    with connect() as conn:
+        with conn.cursor() as cur:
+            if all_ and purge:
+                cur.execute("SELECT COUNT(*)::int AS n FROM papers WHERE extracted_at IS NOT NULL")
+                target_n = cur.fetchone()["n"]
+                cur.execute(
+                    "TRUNCATE paper_problem, paper_assumption, problem_problem, "
+                    "review_queue, problems, assumptions RESTART IDENTITY CASCADE"
+                )
+                cur.execute(
+                    """UPDATE papers
+                          SET extracted_at = NULL,
+                              crypto_relevant = NULL,
+                              relevance_reason = NULL
+                        WHERE extracted_at IS NOT NULL"""
+                )
+                conn.commit()
+                return target_n
+
+            # Non-purge path: per-paper selection
+            if all_:
+                cur.execute("SELECT id FROM papers WHERE extracted_at IS NOT NULL")
+                target = [r["id"] for r in cur.fetchall()]
+            elif ids:
+                target = list(ids)
+            elif sample:
+                cur.execute(
+                    """SELECT id FROM papers
+                        WHERE extracted_at IS NOT NULL
+                        ORDER BY random()
+                        LIMIT %s""",
+                    (sample,),
+                )
+                target = [r["id"] for r in cur.fetchall()]
+            else:
+                return 0
+            if not target:
+                return 0
+            cur.execute("DELETE FROM paper_problem    WHERE paper_id = ANY(%s)", (target,))
+            cur.execute("DELETE FROM paper_assumption WHERE paper_id = ANY(%s)", (target,))
+            cur.execute(
+                """UPDATE papers
+                      SET extracted_at = NULL,
+                          crypto_relevant = NULL,
+                          relevance_reason = NULL
+                    WHERE id = ANY(%s)""",
+                (target,),
+            )
+        conn.commit()
+    return len(target)
 
 
 # ─── problems / assumptions ────────────────────────────────────────────────

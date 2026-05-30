@@ -53,6 +53,11 @@ ALTER TABLE papers ADD COLUMN IF NOT EXISTS
 ALTER TABLE papers ADD COLUMN IF NOT EXISTS embedded_at  TIMESTAMPTZ;
 ALTER TABLE papers ADD COLUMN IF NOT EXISTS extracted_at TIMESTAMPTZ;
 
+-- Crypto-relevance gate result (filled at extract time). Lets us inspect what
+-- got filtered out via `nxc mine research papers --non-crypto`.
+ALTER TABLE papers ADD COLUMN IF NOT EXISTS crypto_relevant BOOLEAN;
+ALTER TABLE papers ADD COLUMN IF NOT EXISTS relevance_reason TEXT;
+
 -- Migrate papers.embedding from vector(768) (initial nomic-embed-text) to
 -- vector(1024) (current mxbai-embed-large). Safe while the column is unfilled;
 -- if already 1024 (or filled at 1024), the EXCEPTION block swallows it.

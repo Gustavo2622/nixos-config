@@ -154,20 +154,29 @@ def _cmd_research_extract(args: argparse.Namespace) -> int:
                       f"{type(err).__name__ if err else 'NoneResult'}: {err}",
                       file=sys.stderr)
                 continue
-            for prob in result.get("problems", []):
-                _handle_problem(paper, prob, dedup_top_k, counts)
-            for asm in result.get("assumptions", []):
-                _handle_assumption(paper, asm, counts)
-            store.mark_paper_extracted(paper["id"])
+            crypto_ok = bool(result.get("crypto_relevant", False))
+            reason = (result.get("relevance_reason") or "").strip() or None
+            if crypto_ok:
+                for prob in result.get("problems", []):
+                    _handle_problem(paper, prob, dedup_top_k, counts)
+                for asm in result.get("assumptions", []):
+                    _handle_assumption(paper, asm, counts)
+            else:
+                counts["papers_filtered"] = counts.get("papers_filtered", 0) + 1
+            store.mark_paper_extracted(paper["id"],
+                                       crypto_relevant=crypto_ok,
+                                       relevance_reason=reason)
             counts["papers_done"] += 1
+            marker = "" if crypto_ok else " [filtered: non-crypto]"
             print(f"  [{paper['id']}] p={len(result['problems'])} "
-                  f"a={len(result['assumptions'])} "
+                  f"a={len(result['assumptions'])}{marker} "
                   f"({counts['papers_done']}/{len(papers)})", flush=True)
 
     print()
     print(f"Done. problems: new={counts['problems_new']} "
           f"merged={counts['problems_merged']} queued={counts['problems_queued']} | "
           f"assumption-edges={counts['assumptions']} | "
+          f"papers_filtered={counts.get('papers_filtered', 0)} | "
           f"papers_failed={counts['papers_failed']}")
     print(f"Pending review queue: {store.count_review_queue()}")
     return 0
@@ -252,21 +261,37 @@ def _handle_problem(paper: dict, prob: dict, top_k: int, counts: dict) -> None:
 
 
 def _handle_assumption(paper: dict, asm: dict, counts: dict) -> None:
-    """Assumptions are keyed by canonical_name (UNIQUE), so dedup is trivially
-    enforced by the upsert. The LLM is instructed to use standard names."""
+    """Canonical-named assumptions UPSERT by canonical_name. Novel assumptions
+    (model-flagged with is_novel=true) go to the review queue rather than
+    auto-merging — protects the assumptions table from junk names like
+    'depolarizing noise' or 'Bell inequalities'."""
     name = (asm.get("canonical_name") or "").strip()
     if not name:
         return
     statement = (asm.get("statement") or "").strip()
+
+    if asm.get("is_novel"):
+        # Don't pollute the assumptions table; let the human decide.
+        store.enqueue_review(
+            kind="new_assumption",
+            payload={
+                "extracted": asm,
+                "paper_id": paper["id"],
+            },
+            source_paper_id=paper["id"],
+        )
+        counts["assumptions_queued"] = counts.get("assumptions_queued", 0) + 1
+        return
+
     vec: list[float] | None = None
     if statement:
         try:
             vec = ollama.embed(statement)[0] or None
         except Exception:
-            vec = None  # carry on without embedding rather than skip the edge
+            vec = None
     aid = store.upsert_assumption(
         canonical_name=name,
-        statement=statement or name,  # fall back if model omitted statement
+        statement=statement or name,
         category=paper["category"],
         embedding=vec,
     )
@@ -284,7 +309,8 @@ def _cmd_research_papers(args: argparse.Namespace) -> int:
     rows = store.list_papers(
         category=args.category, source=args.source,
         search=args.search, only_new=args.only_new,
-        only_revised=args.only_revised, limit=args.limit,
+        only_revised=args.only_revised, non_crypto=args.non_crypto,
+        limit=args.limit,
     )
     if not rows:
         print("(no papers match)")
@@ -299,8 +325,35 @@ def _cmd_research_papers(args: argparse.Namespace) -> int:
         print(f"    {authors}")
         if r["source_categories"]:
             print(f"    tags: {', '.join(r['source_categories'])}")
+        if args.non_crypto and r.get("relevance_reason"):
+            print(f"    reason: {r['relevance_reason']}")
     print()
     print(f"({len(rows)} shown)")
+    return 0
+
+
+def _cmd_research_reset(args: argparse.Namespace) -> int:
+    """Clear extracted_at + gate columns + paper_problem / paper_assumption
+    edges so the next `extract` reprocesses these papers."""
+    if not (args.all or args.sample or args.ids):
+        print("specify one of --all / --sample N / --ids ID,ID,...", file=sys.stderr)
+        return 2
+    ids = None
+    if args.ids:
+        try:
+            ids = [int(x) for x in args.ids.split(",") if x.strip()]
+        except ValueError:
+            print("--ids must be a comma-separated list of integers", file=sys.stderr)
+            return 2
+    if args.purge and not args.all:
+        print("--purge only valid with --all (drops all problems/assumptions/queue).", file=sys.stderr)
+        return 2
+    n = store.reset_extraction(ids=ids, sample=args.sample, all_=args.all, purge=args.purge)
+    if args.purge:
+        print(f"Reset extraction state for {n} papers AND purged all "
+              "problems/assumptions/edges/review_queue.")
+    else:
+        print(f"Reset extraction state for {n} papers.")
     return 0
 
 
@@ -390,8 +443,21 @@ def build_parser() -> argparse.ArgumentParser:
     pap.add_argument("--search")
     pap.add_argument("--only-new", action="store_true")
     pap.add_argument("--only-revised", action="store_true")
+    pap.add_argument("--non-crypto", action="store_true",
+                     help="Only papers the crypto-relevance gate filtered out")
     pap.add_argument("--limit", type=int, default=50)
     pap.set_defaults(func=_cmd_research_papers)
+
+    rst = rsub.add_parser("reset", help="Wipe extraction state for selected papers (sample/all/ids)")
+    rst.add_argument("--sample", type=int,
+                     help="Pick N random already-extracted papers and reset them")
+    rst.add_argument("--ids", help="Comma-separated paper IDs to reset")
+    rst.add_argument("--all", action="store_true",
+                     help="Reset every extracted paper (destructive — use with care)")
+    rst.add_argument("--purge", action="store_true",
+                     help="With --all: also TRUNCATE problems/assumptions/edges/review_queue. "
+                          "Clean slate when changing the extract prompt.")
+    rst.set_defaults(func=_cmd_research_reset)
 
     prob = rsub.add_parser("problems", help="List extracted problems")
     prob.add_argument("--category"); prob.add_argument("--status")
