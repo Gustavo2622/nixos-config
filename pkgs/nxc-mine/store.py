@@ -539,6 +539,29 @@ def list_problems(*, category: str | None = None, status: str | None = None,
             return list(cur.fetchall())
 
 
+def all_assumption_names() -> list[tuple[int, str]]:
+    """Return [(id, canonical_name)] over the whole table — used by the
+    cleanup command which applies config.is_denylisted_assumption()."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, canonical_name FROM assumptions ORDER BY id")
+            return [(r["id"], r["canonical_name"]) for r in cur.fetchall()]
+
+
+def delete_assumptions(ids: list[int]) -> tuple[int, int]:
+    """Delete the assumption rows + their paper edges. Returns (edges, rows)."""
+    if not ids:
+        return (0, 0)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM paper_assumption WHERE assumption_id = ANY(%s)", (ids,))
+            edges = cur.rowcount
+            cur.execute("DELETE FROM assumptions WHERE id = ANY(%s)", (ids,))
+            rows = cur.rowcount
+        conn.commit()
+    return (edges, rows)
+
+
 def list_assumptions(*, category: str | None = None, limit: int = 50) -> list[dict]:
     sql = "SELECT id, canonical_name, statement, category FROM assumptions"
     args: list = []

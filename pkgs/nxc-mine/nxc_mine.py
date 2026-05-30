@@ -335,6 +335,26 @@ def _cmd_research_papers(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_research_clean_assumptions(args: argparse.Namespace) -> int:
+    """Apply config.is_denylisted_assumption() over the assumptions table and
+    delete matching rows (plus their paper_assumption edges). --dry-run lists
+    the targets without deleting."""
+    junk = [(aid, name) for (aid, name) in store.all_assumption_names()
+            if config.is_denylisted_assumption(name)]
+    if not junk:
+        print("No denylisted assumptions found.")
+        return 0
+    print(f"Denylisted assumptions ({len(junk)}):")
+    for aid, name in junk:
+        print(f"  #{aid:>4}  {name}")
+    if args.dry_run:
+        print("\n(--dry-run; no deletions)")
+        return 0
+    edges, rows = store.delete_assumptions([aid for aid, _ in junk])
+    print(f"\nDeleted {rows} assumption rows and {edges} paper edges.")
+    return 0
+
+
 def _cmd_research_reset(args: argparse.Namespace) -> int:
     """Clear extracted_at + gate columns + paper_problem / paper_assumption
     edges so the next `extract` reprocesses these papers."""
@@ -450,6 +470,12 @@ def build_parser() -> argparse.ArgumentParser:
                      help="Only papers the crypto-relevance gate filtered out")
     pap.add_argument("--limit", type=int, default=50)
     pap.set_defaults(func=_cmd_research_papers)
+
+    clean = rsub.add_parser("clean-assumptions",
+                            help="Delete assumption rows whose canonical_name matches the denylist")
+    clean.add_argument("--dry-run", action="store_true",
+                       help="List targets without deleting")
+    clean.set_defaults(func=_cmd_research_clean_assumptions)
 
     rst = rsub.add_parser("reset", help="Wipe extraction state for selected papers (sample/all/ids)")
     rst.add_argument("--sample", type=int,
