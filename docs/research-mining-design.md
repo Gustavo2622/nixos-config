@@ -1,7 +1,27 @@
 # Research mining + open-problem DB (Design + Implementation Plan)
 
 Part of Phase 12 (self-hosting) — the **priority first build** of that phase.
-**Status: designed, not yet implemented.** This doc is the spec to build from.
+
+**Status (2026-05-29):**
+
+| Slice | Commit | Status |
+|---|---|---|
+| 1 — Postgres+pgvector foundation, arXiv + IACR ePrint metadata ingest | `d2f7a9a` | ✓ |
+| 2a — embeddings (bge-m3), LLM extraction (qwen2.5:14b, JSON-schema), 2-stage dedup, review queue | `e3304e6` | ✓ |
+| 2b — Textual TUI for the review queue | `e6376d5` | ✓ |
+| 2c — prompt refinement (crypto-relevance gate, assumption whitelist, confidence calibration, drop quant-ph) | — | next |
+| 2d — full-text PDF ingestion | — | later |
+| 3 — progress_events + assumption security-margin timelines | — | later |
+| 4 — FastAPI read API + web reader + cron + ntfy digest | — | later |
+
+**First-run numbers** (596-paper crypto window, abstract-only): 121 problems, 32 assumptions, 121 paper_problem edges, 59 paper_assumption edges, 45 review-queue items (all triaged via TUI).
+
+**Observed failure modes** to address in 2c:
+1. arXiv `quant-ph` leakage — physics papers ingested as crypto.
+2. cs.CR includes LLM-security / jailbreaks / UAV physical security — out-of-scope.
+3. Junk assumption names ("LLM", "Bell inequalities", "Grover's algorithm", "depolarizing noise").
+4. Paper-specific noise (multiple variant problems per paper from future-work bullets).
+5. Confidences all 1.0 — uncalibrated, no signal.
 
 ## Overview
 
@@ -175,21 +195,20 @@ pkgs/nxc-mine/
 
 ## Implementation order
 
-1. **Schema + store module** — Postgres `nxcmine` DB, pgvector, tables/edges above.
-   Embed/retrieve helpers. `nh os build` green.
-2. **Ingest (arXiv + ePrint)** — `nxc mine ingest`, metadata into `papers`, PDFs
-   resolved; OAI-PMH/API clients. (Venues/DBLP after.)
-3. **Extraction harness** — heuristic region finder + local-LLM structurer →
-   problems/assumptions; `--smart` escalation.
-4. **Dedup** — embed→retrieve→LLM-confirm→review-queue; hierarchy edges; canonical
-   statements. `nxc mine review`.
-5. **Query CLI** — `problems` / `problem` / `assumption` / `backlog`.
-6. **Venue ingest** — DBLP listings → preprint matching → metadata-only + backlog
-   fallback; pluggable access layer interface (institutional access = later impl).
+1. **Schema + ingest** ✓ (`d2f7a9a`) — Postgres+pgvector via `services.postgresql` add-on; `postgresql-nxcmine-ext` oneshot creates the vector extension as superuser (it isn't trusted in this build). `nxc mine research init/ingest/papers` with arXiv (Atom API) and IACR ePrint (OAI-PMH) sources. Schema tracks `first_published` / `last_revised` / `latest_version` so new-vs-revised is a column query, not a flag.
+2. **Embeddings + extraction harness + dedup + review queue** ✓ (`e3304e6`) —
+   - Embeddings via `bge-m3` (1024d, 8192-token ctx) using Ollama's legacy `/api/embeddings` (the newer `/api/embed` is flaky across versions; legacy is ubiquitous and bge-m3 is small enough that per-request HTTP overhead is negligible).
+   - Extraction via `qwen2.5:14b` in JSON-schema format mode. Note: `qwen3.6:27b` and `glm-4.7-flash` both fail to load on this ROCm/Ollama build (`rocBLAS: Could not initialize Tensile host`); investigate after a ROCm bump.
+   - Two-stage dedup: embed claim → pgvector cosine retrieve top-K → LLM `judge_pair` only when `cosine ≥ similarity_high`. Thresholds in `~/.config/nxc/mine/mine.toml` `[dedup]`.
+   - ThreadPoolExecutor parallelises the slow extract call (`extract.concurrency`, default 2); dedup decisions stay serial to avoid merge races.
+   - Defensive: `_vec_literal()` returns None for empty/null vectors → SQL NULL; confidences clamped to [0,1]; empty `canonical_*` skipped.
+3. **TUI review** ✓ (`e6376d5`) — Textual app at `nxc mine research review` with a/m/s/R/e/x/n/p/q bindings; `apply_review_decision` is the single DB-write path, resolving the queue row LAST so crashes leave items pending. `--json` keeps the non-interactive dump.
+4. **Prompt refinement + source narrowing** (next) — extract-prompt negative examples, canonical assumption whitelist, confidence calibration (0.3/0.6/0.9 by cue strength), drop arXiv `quant-ph` or replace with PQC keyword filter, add an optional cheap "is this paper about cryptography?" gate before extraction.
+5. **Full-text PDF ingestion** — `pdftotext`/`marker`, section-aware extraction (`Open Problems` / `Future Work` / `Conclusion`), embedding chunking with overlap.
+6. **Venue ingest** — DBLP listings → preprint matching → metadata-only + backlog fallback; pluggable access layer interface (institutional access = later impl).
 7. **Progress/assumption timelines** — `progress_events`, security-margin view.
 8. **Web reader + read API** — FastAPI + small frontend behind Caddy/Tailscale.
-9. **Cadence + digest** — cron `nxc mine run` + ntfy weekly digest; config seeding
-   + `nxc mut` wiring.
+9. **Cadence + digest** — cron `nxc mine research ingest && extract` + ntfy weekly digest; config seeding + `nxc mut` wiring.
 
 ## Open items (decide later)
 

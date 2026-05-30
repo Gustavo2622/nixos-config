@@ -31,8 +31,12 @@ nix build .#neovim
 - `modules/home/` — home-manager modules (apps, shell, desktop, editors)
 - `modules/nvim.nix` — Neovim config via NVF framework (separate from home modules, consumed directly by flake)
 - `overlays/` — package patches (anki libxshmfence fix, bleeding-edge ltrace)
-- `pkgs/` — custom package definitions (currently empty template)
-- `secrets/` — sops-nix encrypted secrets
+- `pkgs/` — custom packages:
+  - `nxc/` — shell-script dispatcher (`info`/`mut`/`theme`/`health`/`sandbox`/`claude`/`mine`)
+  - `nxc-sandbox/` — bubblewrap-based sandbox runner (Linux-only)
+  - `nxc-mine/` — research-paper mining: Postgres+pgvector store, arXiv + IACR ePrint ingest, bge-m3 embeddings + qwen2.5:14b extraction, Textual TUI review queue
+- `secrets/` — sops-nix encrypted secrets. `server.yaml` (desktop server-side: caddy deSEC token, vaultwarden/searxng/paperless secrets) is encrypted to both the host age key at `/var/lib/sops-nix/key.txt` and the user's personal age key. `secrets.yaml` is personal-only.
+- `docs/` — design docs: `nxc-design.md`, `nxc-ai-design.md`, `research-mining-design.md`, `nvim-keymap.md`, `multi-host-plan.md`
 
 ## Key Patterns
 
