@@ -270,13 +270,16 @@ def _handle_assumption(paper: dict, asm: dict, counts: dict) -> None:
         return
     statement = (asm.get("statement") or "").strip()
 
-    if asm.get("is_novel"):
-        # Don't pollute the assumptions table; let the human decide.
+    # Treat denylisted names (ciphers/primitives/areas/attack-models the
+    # model misclassifies as assumptions) as if they were novel — let the
+    # human decide rather than polluting the assumptions table.
+    if asm.get("is_novel") or config.is_denylisted_assumption(name):
         store.enqueue_review(
             kind="new_assumption",
             payload={
                 "extracted": asm,
                 "paper_id": paper["id"],
+                "denylisted": (not asm.get("is_novel")) and config.is_denylisted_assumption(name),
             },
             source_paper_id=paper["id"],
         )

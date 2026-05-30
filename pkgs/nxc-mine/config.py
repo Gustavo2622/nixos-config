@@ -62,6 +62,57 @@ CANONICAL_ASSUMPTIONS = [
     "RSA", "factoring", "strong-RSA", "QR",
 ]
 
+
+# Names the LLM keeps misclassifying as assumptions even with the negative
+# examples in the prompt. Anything matching (lowercased exact match, or any
+# substring in the regex set) is routed to the review queue instead of
+# UPSERTing into the assumptions table — the human can still accept it via
+# the TUI if it turns out to be legitimate.
+ASSUMPTION_DENYLIST_EXACT = {
+    # Ciphers (concrete algorithms, not assumptions)
+    "aes", "des", "3des", "chacha", "chacha20", "salsa", "salsa20",
+    "blowfish", "twofish", "serpent", "camellia", "sm4", "rc4",
+    # Hash functions
+    "sha-1", "sha1", "sha-256", "sha256", "sha-512", "sha512", "sha-3",
+    "md5", "blake2", "blake3", "keccak", "hmac",
+    # Primitives / categories (not assumptions themselves)
+    "fhe", "he", "homomorphic encryption", "prf", "prg", "prp", "mac",
+    "kdf", "aead", "psi", "psm", "private simultaneous messages",
+    "oprf", "ot", "oblivious transfer", "snark", "stark", "zk",
+    "zero-knowledge", "zero knowledge",
+    # Areas / fields (not assumptions)
+    "post-quantum cryptography", "pqc", "quantum cryptography",
+    "lattice-based assumptions", "lattice-based cryptography",
+    "code-based cryptography",
+    # Attack / channel / noise models
+    "bsc", "binary symmetric channel", "collective-attacks",
+    "collective attacks", "depolarizing noise", "gaussian noise",
+    "side-channel", "side channel",
+    # Algorithm names
+    "grover's algorithm", "grover", "shor's algorithm", "shor",
+    "pollard's rho",
+    # Generic / wrong
+    "none", "n/a", "llm", "regev", "crypto dark matter",
+    "k-colorability problem", "bell inequalities",
+}
+ASSUMPTION_DENYLIST_SUBSTRING = [
+    "protocol",  # "Private Simultaneous Messages (PSM) protocols", "OPRF protocols"
+    "algorithm",  # algorithm names slipping in
+]
+
+
+def is_denylisted_assumption(name: str) -> bool:
+    """True iff `name` shouldn't auto-merge into the assumptions table."""
+    n = (name or "").strip().lower()
+    if not n:
+        return True
+    if n in ASSUMPTION_DENYLIST_EXACT:
+        return True
+    for s in ASSUMPTION_DENYLIST_SUBSTRING:
+        if s in n:
+            return True
+    return False
+
 # ─── infra constants ──────────────────────────────────────────────────────
 
 DB_DSN = "postgresql:///nxcmine?user=nxcmine"

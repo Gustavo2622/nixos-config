@@ -23,12 +23,46 @@ import store
 
 def apply_review_decision(
     item: dict,
-    decision: str,           # 'accept_new' | 'merge' | 'specialize' | 'related' | 'reject'
+    decision: str,           # problem: 'accept_new'|'merge'|'specialize'|'related'|'reject'
+                             # assumption: 'accept_new'|'reject'
     *,
     target_id: int | None = None,
     new_statement: str | None = None,
 ) -> str:
-    """Apply the decision to the DB. Returns a one-line note for resolution."""
+    """Dispatches by item kind ('new_problem' vs 'new_assumption')."""
+    paper_id = item["source_paper_id"]
+    category = _paper_category(paper_id) or "crypto"
+
+    if item["kind"] == "new_assumption":
+        note = _apply_assumption(item, decision, category)
+    else:
+        note = _apply_problem(item, decision, category,
+                             target_id=target_id,
+                             new_statement=new_statement)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE review_queue
+                      SET status = %s, resolved_at = NOW(), resolution = %s
+                    WHERE id = %s""",
+                ("accepted" if decision != "reject" else "rejected", note, item["id"]),
+            )
+        conn.commit()
+    return note
+
+
+def _paper_category(paper_id: int | None) -> str | None:
+    if paper_id is None:
+        return None
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT category FROM papers WHERE id = %s", (paper_id,))
+            r = cur.fetchone()
+            return r["category"] if r else None
+
+
+def _apply_problem(item, decision, category, *, target_id, new_statement) -> str:
     payload = item["payload"]
     extracted = payload.get("extracted", {})
     paper_id = item["source_paper_id"]
@@ -42,72 +76,70 @@ def apply_review_decision(
     confidence = max(0.0, min(1.0, confidence))
     evidence = extracted.get("evidence")
 
-    # Look up paper category (problems carry it directly).
-    rows = store.list_papers(limit=1)  # placeholder — we'll fetch by id instead
-    category = None
-    with store.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT category FROM papers WHERE id = %s", (paper_id,))
-            r = cur.fetchone()
-            if r:
-                category = r["category"]
-    if not category:
-        category = "crypto"
-
-    note = ""
     if decision == "reject":
-        note = "rejected"
-
-    elif decision == "accept_new":
+        return "rejected"
+    if decision == "accept_new":
         vec = _embed_or_none(statement)
         new_id = store.insert_problem(
-            canonical_statement=statement,
-            problem_type=problem_type,
-            category=category,
-            embedding=vec,
+            canonical_statement=statement, problem_type=problem_type,
+            category=category, embedding=vec,
         )
         store.add_paper_problem_edge(paper_id, new_id, role=role,
                                     confidence=confidence, evidence=evidence)
-        note = f"accepted new problem #{new_id}"
-
-    elif decision == "merge":
+        return f"accepted new problem #{new_id}"
+    if decision == "merge":
         if target_id is None:
             raise ValueError("merge requires target_id")
         store.add_problem_alias(target_id, statement)
         store.add_paper_problem_edge(paper_id, target_id, role=role,
                                     confidence=confidence, evidence=evidence)
-        note = f"merged into #{target_id}"
-
-    elif decision in ("specialize", "related"):
+        return f"merged into #{target_id}"
+    if decision in ("specialize", "related"):
         if target_id is None:
             raise ValueError(f"{decision} requires target_id")
         vec = _embed_or_none(statement)
         new_id = store.insert_problem(
-            canonical_statement=statement,
-            problem_type=problem_type,
-            category=category,
-            embedding=vec,
+            canonical_statement=statement, problem_type=problem_type,
+            category=category, embedding=vec,
         )
         kind = "specializes" if decision == "specialize" else "related"
         store.add_problem_problem_edge(parent_id=target_id, child_id=new_id, kind=kind)
         store.add_paper_problem_edge(paper_id, new_id, role=role,
                                     confidence=confidence, evidence=evidence)
-        note = f"new problem #{new_id} {kind} #{target_id}"
+        return f"new problem #{new_id} {kind} #{target_id}"
+    raise ValueError(f"unknown problem decision: {decision}")
 
-    else:
-        raise ValueError(f"unknown decision: {decision}")
 
-    # Last step: mark resolved.
-    with store.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """UPDATE review_queue
-                      SET status = %s, resolved_at = NOW(), resolution = %s
-                    WHERE id = %s""",
-                ("accepted" if decision != "reject" else "rejected", note, item["id"]),
-            )
-        conn.commit()
-    return note
+def _apply_assumption(item, decision, category) -> str:
+    """Assumptions only support accept / reject — they're keyed by
+    canonical_name so 'merge / specialize / related' don't apply."""
+    if decision not in ("accept_new", "reject"):
+        raise ValueError(f"assumption only supports accept/reject, got {decision}")
+    if decision == "reject":
+        return "rejected"
+    payload = item["payload"]
+    extracted = payload.get("extracted", {})
+    paper_id = item["source_paper_id"]
+    name = (extracted.get("canonical_name") or "").strip()
+    statement = (extracted.get("statement") or name).strip()
+    role = extracted.get("role", "relies_on")
+    parameters = extracted.get("parameters") or None
+    try:
+        confidence = float(extracted.get("confidence", 0.5))
+    except (TypeError, ValueError):
+        confidence = 0.5
+    confidence = max(0.0, min(1.0, confidence))
+    evidence = extracted.get("evidence")
+    vec = _embed_or_none(statement)
+    aid = store.upsert_assumption(
+        canonical_name=name, statement=statement,
+        category=category, embedding=vec,
+    )
+    store.add_paper_assumption_edge(
+        paper_id, aid, role=role, parameters=parameters,
+        confidence=confidence, evidence=evidence,
+    )
+    return f"accepted assumption #{aid} ({name})"
 
 
 def _embed_or_none(text: str) -> list[float] | None:
@@ -244,8 +276,6 @@ class ReviewApp(App):
         payload = item["payload"]
         extracted = payload.get("extracted", {})
         paper = _fetch_paper(item["source_paper_id"]) if item["source_paper_id"] else None
-        candidates = payload.get("candidates", [])
-        statement_now = self._statement_override or extracted.get("canonical_statement", "")
 
         status.update(
             f"[b]Item {self._idx + 1} / {len(self._items)}[/b]  "
@@ -259,24 +289,46 @@ class ReviewApp(App):
             lines.append(f"[dim]paper[/dim]  [{paper['source']}:{paper['ext_id']}]  {paper['title']}")
         else:
             lines.append("[dim]paper[/dim]  (no associated paper)")
-        edited = " [yellow](edited)[/yellow]" if self._statement_override else ""
-        lines.append(f"\n[bold cyan]NEW[/bold cyan]{edited}: {statement_now}")
-        lines.append(
-            f"[dim]type[/dim]={extracted.get('problem_type','?')}  "
-            f"[dim]role[/dim]={extracted.get('role','?')}  "
-            f"[dim]conf[/dim]={extracted.get('confidence','?')}"
-        )
-        evidence = (extracted.get("evidence") or "").strip()
-        if evidence:
-            lines.append(f"[dim]evidence[/dim]: {evidence}")
-        if candidates:
-            lines.append("\n[dim]Closest existing:[/dim]")
-            for c in candidates[:5]:
-                p = _fetch_problem(c["id"])
-                stmt = p["canonical_statement"] if p else "(missing)"
-                lines.append(
-                    f"  [bold]#{c['id']}[/bold]  sim={c['sim']:.3f}  {stmt}"
-                )
+
+        if item["kind"] == "new_assumption":
+            name = extracted.get("canonical_name", "")
+            stmt = extracted.get("statement", "")
+            flag = ""
+            if payload.get("denylisted"):
+                flag = " [yellow](denylisted name — likely NOT an assumption)[/yellow]"
+            elif extracted.get("is_novel"):
+                flag = " [yellow](model-flagged as novel)[/yellow]"
+            lines.append(f"\n[bold cyan]ASSUMPTION[/bold cyan]{flag}: [b]{name}[/b]")
+            lines.append(f"[dim]statement[/dim]: {stmt}")
+            lines.append(
+                f"[dim]role[/dim]={extracted.get('role','?')}  "
+                f"[dim]conf[/dim]={extracted.get('confidence','?')}"
+            )
+            ev = (extracted.get("evidence") or "").strip()
+            if ev:
+                lines.append(f"[dim]evidence[/dim]: {ev}")
+            lines.append("\n[dim](actions: a=accept x=reject; merge/specialize/related don't apply)[/dim]")
+        else:
+            statement_now = self._statement_override or extracted.get("canonical_statement", "")
+            edited = " [yellow](edited)[/yellow]" if self._statement_override else ""
+            lines.append(f"\n[bold cyan]NEW[/bold cyan]{edited}: {statement_now}")
+            lines.append(
+                f"[dim]type[/dim]={extracted.get('problem_type','?')}  "
+                f"[dim]role[/dim]={extracted.get('role','?')}  "
+                f"[dim]conf[/dim]={extracted.get('confidence','?')}"
+            )
+            ev = (extracted.get("evidence") or "").strip()
+            if ev:
+                lines.append(f"[dim]evidence[/dim]: {ev}")
+            candidates = payload.get("candidates", [])
+            if candidates:
+                lines.append("\n[dim]Closest existing:[/dim]")
+                for c in candidates[:5]:
+                    p = _fetch_problem(c["id"])
+                    stmt = p["canonical_statement"] if p else "(missing)"
+                    lines.append(
+                        f"  [bold]#{c['id']}[/bold]  sim={c['sim']:.3f}  {stmt}"
+                    )
         body.update("\n".join(lines))
 
     # ─── actions ───
@@ -318,19 +370,29 @@ class ReviewApp(App):
     def action_accept(self) -> None:        self._apply("accept_new")
     def action_reject(self) -> None:        self._apply("reject")
 
+    def _is_assumption(self) -> bool:
+        item = self._current()
+        return bool(item and item["kind"] == "new_assumption")
+
     def action_merge(self) -> None:
+        if self._is_assumption():
+            self.notify("merge doesn't apply to assumptions (use a/x)", severity="warning"); return
         t = self._best_target()
         if t is None:
             self.notify("no candidate target to merge into", severity="warning"); return
         self._apply("merge", target_id=t)
 
     def action_specialize(self) -> None:
+        if self._is_assumption():
+            self.notify("specialize doesn't apply to assumptions (use a/x)", severity="warning"); return
         t = self._best_target()
         if t is None:
             self.notify("no candidate target to specialize", severity="warning"); return
         self._apply("specialize", target_id=t)
 
     def action_related(self) -> None:
+        if self._is_assumption():
+            self.notify("related doesn't apply to assumptions (use a/x)", severity="warning"); return
         t = self._best_target()
         if t is None:
             self.notify("no candidate target to relate to", severity="warning"); return
