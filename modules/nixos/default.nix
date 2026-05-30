@@ -18,6 +18,8 @@
     ./flatpak.nix
     ./fonts.nix
     ./forgejo.nix
+    ./linkding.nix
+    ./miniflux.nix
     # Include the results of the hardware scan.
     # ./greetd.nix
     ./hardware-configuration.nix
@@ -60,6 +62,7 @@
     ./uptime-kuma.nix
     ./user.nix
     ./vaultwarden.nix
+    ./wallabag.nix
     ./utils.nix
     ./virtualization.nix
     ./windows.nix
