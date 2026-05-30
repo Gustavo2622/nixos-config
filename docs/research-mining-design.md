@@ -2,26 +2,41 @@
 
 Part of Phase 12 (self-hosting) — the **priority first build** of that phase.
 
-**Status (2026-05-29):**
+**Status (2026-05-30):**
 
 | Slice | Commit | Status |
 |---|---|---|
 | 1 — Postgres+pgvector foundation, arXiv + IACR ePrint metadata ingest | `d2f7a9a` | ✓ |
 | 2a — embeddings (bge-m3), LLM extraction (qwen2.5:14b, JSON-schema), 2-stage dedup, review queue | `e3304e6` | ✓ |
 | 2b — Textual TUI for the review queue | `e6376d5` | ✓ |
-| 2c — prompt refinement (crypto-relevance gate, assumption whitelist, confidence calibration, drop quant-ph) | — | next |
+| 2c — crypto-relevance gate, canonical assumption whitelist, discrete confidence buckets, `reset --all --purge` | `42d3f51` | ✓ |
+| 2c.1 — assumption denylist + TUI rendering for `new_assumption` items + `clean-assumptions` retroactive cleanup | `e2604f4`, `7435cf2` | ✓ |
 | 2d — full-text PDF ingestion | — | later |
-| 3 — progress_events + assumption security-margin timelines | — | later |
-| 4 — FastAPI read API + web reader + cron + ntfy digest | — | later |
+| **3 — progress_events + assumption security-margin timelines** | — | **next** |
+| 4 — FastAPI read API + web reader + cron + ntfy digest | — | after 3 |
 
-**First-run numbers** (596-paper crypto window, abstract-only): 121 problems, 32 assumptions, 121 paper_problem edges, 59 paper_assumption edges, 45 review-queue items (all triaged via TUI).
+**Run history:**
+- 1st run (no gate, quant-ph included): 596 papers → 121 problems, 32 assumptions, 45 review items. Heavy noise from quant-ph + LLM-security.
+- 2nd run (slice 2c, gate active, quant-ph dropped): 596 papers → **117 crypto / 479 filtered**, **74 problems**, **40 assumptions**, 14 review (3 novel-assumption). Substantial quality jump.
 
-**Observed failure modes** to address in 2c:
-1. arXiv `quant-ph` leakage — physics papers ingested as crypto.
-2. cs.CR includes LLM-security / jailbreaks / UAV physical security — out-of-scope.
-3. Junk assumption names ("LLM", "Bell inequalities", "Grover's algorithm", "depolarizing noise").
-4. Paper-specific noise (multiple variant problems per paper from future-work bullets).
-5. Confidences all 1.0 — uncalibrated, no signal.
+**Failure modes addressed by 2c / 2c.1:**
+1. ✅ arXiv `quant-ph` leakage → dropped from sources.
+2. ✅ cs.CR LLM-security creep → caught by the gate's negative-example list.
+3. ✅ Junk assumption names ("Bell inequalities", "Grover's algorithm", "depolarizing noise") → denylist routes them to review queue rather than auto-merging; `clean-assumptions` sweeps existing rows.
+4. Paper-specific noise (multi-variant problems from one paper's future-work bullets) — still present, partly fundamental to the data.
+5. ✅ Confidence calibration → discrete 0.3/0.6/0.9 buckets enforced.
+
+**Slice 3 sketch:**
+- Re-LLM pass over already-`crypto_relevant=true` papers extracting `attacks` / `weakens` events as structured deltas (e.g. *"cost of MLWE-512 cryptanalysis dropped from 2^155 to 2^148"*).
+- New table `progress_events (id, paper_id, assumption_id, event_date, delta_text, delta_kind, embedding)`.
+- `nxc mine research timeline <assumption_id>` lists events ordered chronologically — the "is LWE still comfortable?" UI.
+- Cost: ~20-30 min LLM time on the existing 117 crypto papers.
+
+**Slice 4 sketch:**
+- FastAPI read-API exposing the knowledge graph (papers, problems, assumptions, edges, timelines).
+- Small HTMX/Jinja frontend at `nxcmine.gxdelerue.dedyn.io` (Caddy vhost, LE cert via deSEC).
+- systemd timer for periodic `ingest && extract`.
+- ntfy webhook for weekly digest of new problems + revisions + queue items.
 
 ## Overview
 
